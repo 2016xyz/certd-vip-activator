@@ -1,0 +1,8 @@
+name: namesilo
+title: namesilo
+desc: namesilo dns provider
+icon: simple-icons:namesilo
+accessType: namesilo
+pluginType: dnsProvider
+type: builtIn
+scriptFilePath: /plugins/plugin-namesilo/dns-provider.js

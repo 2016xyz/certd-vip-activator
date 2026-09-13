@@ -1,0 +1,31 @@
+name: AliyunAccess
+author: greper
+version: 1.0.0
+minCertdVersion: 1.31.11
+title: 阿里云授权
+desc: 阿里云授权
+icon: fa-cloud
+type: access
+dependentPlugins:
+  - greper/AliyunSdk
+metadata:
+  dependencies:
+    - "@alicloud/pop-core": "^1.7.10"
+  input:
+    accessKeyId:
+      title: AccessKeyId
+      type: string
+      component:
+        name: a-input
+      required: true
+      helper: 访问密钥ID
+    accessKeySecret:
+      type: string
+      title: AccessKeySecret
+      encrypt: true
+script: |
+  import { AccessInput, BaseAccess, IsAccess } from '@certd/pipeline';
+  class AliyunAccess extends BaseAccess {
+    accessKeyId = '';
+    secretAccessKey = '';
+  }

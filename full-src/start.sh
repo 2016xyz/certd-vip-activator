@@ -1,0 +1,106 @@
+#
+set -e
+
+# 设置SUDO命令
+if [[ "$(uname -s)" =~ ^MINGW || "$(uname -s)" =~ ^CYGWIN || "$(uname -s)" =~ ^MSYS || "$(id -u)" == "0" ]]; then
+    SUDO_CMD=""
+    SUDO_CMD_E=""
+else
+    SUDO_CMD="sudo"
+    SUDO_CMD_E="sudo -E"
+fi
+
+# echo "即将删除packages下除ui之外的其他目录，按y确认（如果您没有修改过源码，按y即可）"
+# read -p "y/n: " confirm
+# if [ $confirm != "y" ]; then
+#   echo "取消操作"
+#   exit 1
+# fi
+# find ./packages -mindepth 1 -maxdepth 1 -type d ! -name 'ui' -exec rm -rf {} +
+# echo "删除成功"
+echo "修改 pnpm-workspace.yaml"
+cat > pnpm-workspace.yaml << EOF
+packages:
+  - 'packages/ui/certd-server'
+EOF
+
+
+# 检查输入是否正确 循环输入
+while true; do
+  echo "是否后台运行(第一次运行建议选择n，调试没有问题之后，重新运行，选择y)"
+  read -p "y/n: " confirmNohup
+  # 校验输入是否正确
+  if [ $confirmNohup != "y" ] && [ $confirmNohup != "n" ]; then
+    echo "输入错误"
+  else
+    break
+  fi
+done
+
+
+echo "安装pnpm@10.33.4, 前提是已经安装了nodejs"
+$SUDO_CMD npm install -g pnpm@10.33.4 --registry https://registry.npmmirror.com
+echo "安装依赖"
+$SUDO_CMD pnpm install --registry https://registry.npmmirror.com
+
+
+# 获取版本号
+version=$(node --experimental-json-modules ./scripts/version.js)
+echo "当前版本号为: $version"
+
+echo "开始构建"
+cd packages/ui/certd-server
+echo "构建certd-server"
+$SUDO_CMD_E pnpm run build
+echo "构建完成"
+
+
+echo "下载前端ui"
+front_zip="ui-$version.zip"
+# 校验zip文件是否完整可用
+is_valid_zip() {
+  if [ ! -f "./$front_zip" ]; then
+    return 1
+  fi
+  unzip -tq "./$front_zip" > /dev/null 2>&1
+}
+# 如果zip已经存在且完整，就不需要下载
+if is_valid_zip; then
+  echo "$front_zip 已经存在且完整，不需要下载"
+else
+  echo "$front_zip 不存在或已损坏，开始下载"
+  # 下载之前清理一下
+  rm -rf ui-*.zip
+  # https://atomgit.com/certd/certd/releases/download/v1.37.16/ui-1.37.16.zip
+  URL="https://atomgit.com/certd/certd/releases/download/v$version/ui-$version.zip"
+  if command -v wget &> /dev/null; then
+    wget -O "$front_zip" "$URL"
+  elif command -v curl &> /dev/null; then
+    # -f 让 curl 在 HTTP 错误（如 404）时也返回非零退出码
+    curl -fL -o "$front_zip" "$URL"
+  else
+    echo "错误：需要 wget 或 curl 来下载前端文件包，请先安装 wget 或 curl"
+    exit 1
+  fi
+  # 下载后再校验一次，防止下载到不完整/损坏的文件
+  if ! is_valid_zip; then
+    echo "错误：$front_zip 下载失败或不完整，请删除该文件后重新运行"
+    exit 1
+  fi
+fi
+# 覆盖解压缩
+unzip -o -q "$front_zip" -d ./public
+
+echo "安装成功，即将启动服务"
+echo "如果没有改动，后续可以使用 ./start_fast.sh 快速启动服务"
+
+# 前台运行
+if [ $confirmNohup != "y" ]; then
+  echo "当前运行模式为前台运行，ctrl+c或者关闭ssh将会停止运行"
+  $SUDO_CMD pnpm run start
+else
+  echo "当前运行模式为后台运行，可以通过tail -f ./certd.log 命令查看日志"
+  nohup $SUDO_CMD pnpm run start > certd.log &
+fi
+
+

@@ -1,0 +1,43 @@
+name: feishu
+title: 飞书通知
+desc: 飞书群聊webhook通知
+needPlus: true
+input:
+  webhook:
+    title: webhook地址
+    component:
+      placeholder: https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxxxxxxxxxx
+    helper: >-
+      飞书APP->群聊->设置->机器人->添加机器人->自定义webhook->[创建机器人->复制webhook地址](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot?lang=zh-CN)
+    required: true
+  secret:
+    title: 加签密钥
+    component:
+      placeholder: SECxxxxxxxxxxxxxxxxxxxxx
+    helper: 必须选择一种安全设置，建议选择加密密钥
+    required: false
+  atUserIds:
+    title: '@用户'
+    component:
+      placeholder: 非必填，支持多个，填写完一个按回车
+      name: a-select
+      vModel: value
+      mode: tags
+      multiple: true
+      open: false
+    helper: >-
+      填写要@的用户ID：【ou_xxxxxxxxx】
+
+      用户ID获取方法,[查看OpenId获取方法](https://open.feishu.cn/document/home/user-identity-introduction/open-id)
+    required: false
+  isAtAll:
+    title: '@all'
+    component:
+      placeholder: 非必填
+      name: a-switch
+      vModel: checked
+    helper: 是否@所有人
+    required: false
+pluginType: notification
+type: builtIn
+scriptFilePath: /plugins/plugin-notification/feishu/index.js

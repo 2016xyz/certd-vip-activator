@@ -1,0 +1,37 @@
+name: serverchan
+title: Server酱ᵀ
+desc: https://sct.ftqq.com/
+needPlus: true
+input:
+  endpoint:
+    title: 服务地址
+    value: https://sctapi.ftqq.com
+    required: true
+  sendKey:
+    title: SendKey
+    component:
+      placeholder: https://sctapi.ftqq.com/<SENDKEY>.send
+    helper: https://sct.ftqq.com/ 微信扫码获取
+    required: true
+  channel:
+    title: 消息通道号
+    component:
+      placeholder: 9|66
+    helper: 可以不填，最多两个通道，[通道配置说明](https://sct.ftqq.com/sendkey)
+    required: false
+  noip:
+    title: 是否隐藏IP
+    component:
+      name: a-switch
+      vModel: checked
+    required: false
+  skipSslVerify:
+    title: 忽略证书校验
+    value: false
+    component:
+      name: a-switch
+      vModel: checked
+    required: false
+pluginType: notification
+type: builtIn
+scriptFilePath: /plugins/plugin-notification/serverchan/index.js

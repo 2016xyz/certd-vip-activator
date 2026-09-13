@@ -1,0 +1,25 @@
+name: namesilo
+title: namesilo授权
+desc: ''
+icon: simple-icons:namesilo
+input:
+  apiKey:
+    title: API Key
+    component:
+      placeholder: api key
+    helper: |-
+      前往 [获取API Key](https://www.namesilo.com/account/api-manager)
+      不要勾选第一项（Generate key for read-only access）
+      勾选第二项（Submitting this form...）
+      然后点击Generate按钮
+    required: true
+    encrypt: true
+  testRequest:
+    title: 测试
+    component:
+      name: api-test
+      action: TestRequest
+    helper: 点击测试接口是否正常
+pluginType: access
+type: builtIn
+scriptFilePath: /plugins/plugin-namesilo/access.js

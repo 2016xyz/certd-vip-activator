@@ -1,0 +1,130 @@
+﻿<script lang="ts" setup>
+import { BasicLayout, LockScreen, UserDropdown } from "/@/vben/layouts";
+
+import { computed, onErrorCaptured, onMounted, provide, ref } from "vue";
+import { useUserStore } from "/@/store/user";
+import VipButton from "/@/components/vip-button/index.vue";
+import TutorialButton from "/@/components/tutorial/index.vue";
+import { useSettingStore } from "/@/store/settings";
+import PageFooter from "./components/footer/index.vue";
+import { useRouter } from "vue-router";
+import MaxKBChat from "/@/components/ai/index.vue";
+import { useI18n } from "vue-i18n";
+import { useProjectStore } from "../store/project";
+
+const { t } = useI18n();
+
+const userStore = useUserStore();
+
+const router = useRouter();
+const menus = computed(() => [
+  {
+    handler: () => {
+      router.push("/cert/mine/user-profile");
+    },
+    icon: "fa-solid:book",
+    text: t("certd.accountInfo"),
+  },
+  {
+    handler: () => {
+      router.push("/cert/mine/security");
+    },
+    icon: "fluent:shield-keyhole-16-regular",
+    text: t("certd.securitySettings"),
+  },
+]);
+
+const avatar = computed(() => {
+  const avt = userStore.getUserInfo?.avatar;
+  if (!avt) {
+    return "";
+  }
+  if (avt.startsWith("http")) {
+    return avt;
+  }
+  return `/api/basic/file/download?key=${avt}`;
+});
+
+async function handleLogout() {
+  await userStore.logout(true);
+}
+function goUserProfile() {
+  router.push("/cert/mine/user-profile");
+}
+
+const settingStore = useSettingStore();
+
+const sysPublic = computed(() => {
+  return settingStore.sysPublic;
+});
+const siteInfo = computed(() => {
+  return settingStore.siteInfo;
+});
+
+onErrorCaptured(e => {
+  console.error("ErrorCaptured:", e);
+  // notification.error({ message: e.message });
+  //阻止错误向上传递
+  return false;
+});
+
+onMounted(async () => {
+  await settingStore.checkUrlBound();
+});
+
+function goGithub() {
+  window.open("https://github.com/certd/certd");
+}
+function goCertdClient() {
+  window.open("https://github.com/certd/certd-client");
+}
+const settingsStore = useSettingStore();
+const chatBox = ref();
+const openChat = (q: string) => {
+  chatBox.value.openChat({ q });
+};
+provide("fn:ai.open", openChat);
+
+const projectStore = useProjectStore();
+</script>
+
+<template>
+  <BasicLayout @clear-preferences-and-logout="handleLogout">
+    <template #header-left-0>
+      <div v-if="projectStore.isEnterprise" class="ml-1 mr-2">
+        <project-selector class="flex-center header-btn" />
+      </div>
+    </template>
+    <template #user-dropdown>
+      <UserDropdown :avatar="avatar" :menus="menus" :text="userStore.userInfo?.nickName || userStore.userInfo?.username" description="" tag-text="" @logout="handleLogout" @user-profile="goUserProfile" />
+    </template>
+    <template #lock-screen>
+      <LockScreen :avatar @to-login="handleLogout" />
+    </template>
+    <template #header-right-0>
+      <div class="hover:bg-accent ml-1 mr-2 cursor-pointer rounded-full hidden md:block">
+        <tutorial-button class="flex-center header-btn" mode="nav" />
+      </div>
+      <div class="hover:bg-accent ml-1 mr-2 cursor-pointer rounded-full">
+        <vip-button class="flex-center header-btn" mode="nav" />
+      </div>
+      <div v-if="!settingStore.isComm" class="hover:bg-accent ml-1 mr-2 cursor-pointer rounded-full hidden md:block">
+        <fs-button shape="circle" type="text" icon="clarity:host-solid-badged" :text="null" :tooltip="{ title: t('certd.client') }" @click="goCertdClient" />
+      </div>
+      <div v-if="!settingStore.isComm" class="hover:bg-accent ml-1 mr-2 cursor-pointer rounded-full hidden md:block">
+        <fs-button shape="circle" type="text" icon="ion:logo-github" :text="null" @click="goGithub" />
+      </div>
+      <MaxKBChat v-if="settingsStore.sysPublic.aiChatEnabled !== false" ref="chatBox" />
+    </template>
+    <template #footer>
+      <PageFooter></PageFooter>
+    </template>
+  </BasicLayout>
+</template>
+
+<style lang="less">
+.header-btn {
+  font-size: 14px;
+  padding: 5px;
+}
+</style>

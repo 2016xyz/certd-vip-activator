@@ -1,0 +1,128 @@
+import { AbstractTaskPlugin, IsTaskPlugin, pluginGroups, RunStrategy, TaskInput } from "@certd/pipeline";
+import { CertInfo, CertReader } from "@certd/plugin-cert";
+import { createCertDomainGetterInputDefine, createRemoteSelectInputDefine } from "@certd/plugin-lib";
+import { TencentAccess, TencentSslClient } from "../../../plugin-lib/tencent/index.js";
+import { CertApplyPluginNames } from "@certd/plugin-cert";
+@IsTaskPlugin({
+  name: "TencentDeployCertToCDNv2",
+  title: "腾讯云-部署到CDN-v2",
+  icon: "svg:icon-tencentcloud",
+  group: pluginGroups.tencent.key,
+  desc: "推荐使用，支持CDN域名以及COS加速域名",
+  dependPlugins: {
+    "access:tencent": "*",
+  },
+  default: {
+    strategy: {
+      runStrategy: RunStrategy.SkipWhenSucceed,
+    },
+  },
+})
+export class TencentDeployCertToCDNv2 extends AbstractTaskPlugin {
+  @TaskInput({
+    title: "域名证书",
+    helper: "请选择前置任务输出的域名证书，或者选择前置任务“上传证书到腾讯云”任务的证书ID",
+    component: {
+      name: "output-selector",
+      from: [...CertApplyPluginNames, "UploadCertToTencent"],
+    },
+    required: true,
+  })
+  cert!: CertInfo | string;
+
+  @TaskInput(createCertDomainGetterInputDefine({ props: { required: false } }))
+  certDomains!: string[];
+  @TaskInput({
+    title: "Access提供者",
+    helper: "access 授权",
+    component: {
+      name: "access-selector",
+      type: "tencent",
+    },
+    required: true,
+  })
+  accessId!: string;
+
+  @TaskInput(
+    createRemoteSelectInputDefine({
+      title: "CDN域名",
+      helper: "请选择域名或输入域名",
+      typeName: "TencentDeployCertToCDNv2",
+      action: TencentDeployCertToCDNv2.prototype.onGetDomainList.name,
+    })
+  )
+  domains!: string | string[];
+
+  async onInstance() {}
+
+  async execute(): Promise<void> {
+    const access = await this.getAccess<TencentAccess>(this.accessId);
+    const sslClient = new TencentSslClient({
+      access,
+      logger: this.logger,
+    });
+
+    let tencentCertId = this.cert as string;
+    if (typeof this.cert !== "string") {
+      const certReader = new CertReader(this.cert);
+      tencentCertId = await sslClient.uploadToTencent({
+        certName: certReader.buildCertName(),
+        cert: this.cert,
+      });
+    }
+
+    const res = await sslClient.deployCertificateInstance({
+      CertificateId: tencentCertId,
+      ResourceType: "cdn",
+      Status: 1,
+      InstanceIdList: this.domains,
+    });
+
+    await this.ctx.utils.sleep(3000);
+
+    this.logger.info("部署成功", res);
+  }
+
+  checkRet(ret: any) {
+    if (!ret || ret.Error) {
+      throw new Error("执行失败：" + ret.Error.Code + "," + ret.Error.Message);
+    }
+  }
+
+  async getCdnClient() {
+    const accessProvider = await this.getAccess<TencentAccess>(this.accessId);
+    const sdk = await (this as any).importRuntime("tencentcloud-sdk-nodejs/tencentcloud/services/cdn/v20180606/index.js");
+    const CdnClient = sdk.v20180606.Client;
+
+    const clientConfig = {
+      credential: {
+        secretId: accessProvider.secretId,
+        secretKey: accessProvider.secretKey,
+      },
+      region: "",
+      profile: {
+        httpProfile: {
+          endpoint: `cdn.${accessProvider.intlDomain()}tencentcloudapi.com`,
+        },
+      },
+    };
+
+    return new CdnClient(clientConfig);
+  }
+
+  async onGetDomainList(data: any) {
+    const cdnClient = await this.getCdnClient();
+    const res = await cdnClient.DescribeDomains({
+      Limit: 1000,
+    });
+    this.checkRet(res);
+    const options = res.Domains.map((item: any) => {
+      return {
+        label: item.Domain,
+        value: item.Domain,
+        domain: item.Domain,
+      };
+    });
+    return this.ctx.utils.options.buildGroupOptions(options, this.certDomains);
+  }
+}

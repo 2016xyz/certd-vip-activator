@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+PoC/selfsign_key.pem
+full-src/**/dist/
+full-src/**/.nyc_output/

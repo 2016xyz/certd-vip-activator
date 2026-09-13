@@ -1,0 +1,9 @@
+name: xinnetconnect
+title: 新网互联
+desc: 新网互联
+icon: svg:icon-xinnet
+accessType: xinnetconnect
+order: 999
+pluginType: dnsProvider
+type: builtIn
+scriptFilePath: /plugins/plugin-xinnetconnet/dns-provider.js

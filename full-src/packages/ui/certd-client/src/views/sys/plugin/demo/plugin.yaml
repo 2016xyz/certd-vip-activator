@@ -1,0 +1,50 @@
+name: AliyunDeployToCdn
+version: 1.0.0
+author:
+title: 阿里云-部署到CDN
+desc: 部署证书到阿里云CDN
+icon: fa-cloud
+pluginType: plugin
+metadata:
+  dependencies:
+    - "@alicloud/pop-core": "^1.7.10"
+  input:
+    endpoint:
+      type: string,
+      title: "证书服务接入点"
+      helper: "不会选就按默认"
+      value: "cas.aliyuncs.com"
+      component:
+        name: "a-select"
+        options:
+          - value: "cas.aliyuncs.com"
+            label: "中国大陆"
+      required: true,
+
+    cert:
+      type: string,
+      title: "域名证书"
+      helper: "请选择前置任务输出的域名证书"
+      component:
+        name: "output-selector"
+        from:
+          - "group:cert_apply"
+          - "xxx"
+      required: true,
+
+script: |
+  import { AbstractTaskPlugin, IsTaskPlugin, pluginGroups, RunStrategy, TaskInput } from '@certd/pipeline';
+  class AliyunDeployToCdn extends AbstractTaskPlugin {
+    endpoint = '';
+    cert = '';
+    async onInstance() {}
+    async execute(): Promise<void> {
+      this.logger.info('开始部署证书到阿里云cdn');
+      const access = await this.accessService.getById<AliyunAccess>(this.accessId);
+      const sslClient = new AliyunSslClient({
+        access,
+        logger: this.logger,
+        endpoint: this.endpoint || 'cas.aliyuncs.com',
+      });
+    }
+  }

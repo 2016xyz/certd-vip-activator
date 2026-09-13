@@ -1,0 +1,15 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: RestartCertd
+title: 重启 Certd
+icon: mdi:restart
+desc: 【仅管理员可用】 重启 certd的https服务，用于更新 Certd 的 ssl 证书
+group: admin
+onlyAdmin: true
+input: {}
+output: {}
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-admin/plugin-restart.js

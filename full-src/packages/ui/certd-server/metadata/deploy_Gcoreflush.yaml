@@ -1,0 +1,39 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: Gcoreflush
+title: Gcore-刷新Gcore证书
+desc: 刷新现有的证书
+icon: clarity:plugin-line
+group: cdn
+input:
+  certName:
+    title: 证书名称
+    helper: 可以修改也可以和现在的保留一致
+    order: 0
+  ssl_id:
+    title: 证书ID
+    required: true
+    order: 0
+  cert:
+    title: 域名证书
+    helper: 请选择前置任务输出的域名证书
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+    required: true
+    order: 0
+  accessId:
+    title: Access授权
+    helper: Gcore
+    component:
+      name: access-selector
+      type: Gcore
+    required: true
+    order: 0
+output: {}
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-gcore/plugins/plugin-flush.js

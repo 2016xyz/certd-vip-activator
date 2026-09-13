@@ -1,0 +1,30 @@
+name: CacheFly
+title: CacheFly
+desc: CacheFly
+icon: clarity:plugin-line
+input:
+  username:
+    title: username
+    component:
+      placeholder: username
+    required: true
+  password:
+    title: password
+    component:
+      placeholder: password
+    required: true
+    encrypt: true
+  otpkey:
+    title: totp key
+    component:
+      placeholder: totp key
+    encrypt: true
+  testRequest:
+    title: 测试
+    component:
+      name: api-test
+      action: TestRequest
+    helper: 测试授权是否正确
+pluginType: access
+type: builtIn
+scriptFilePath: /plugins/plugin-cachefly/access.js

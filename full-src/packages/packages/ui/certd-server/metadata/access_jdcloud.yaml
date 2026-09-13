@@ -1,0 +1,27 @@
+name: jdcloud
+title: 京东云
+desc: ''
+icon: svg:icon-jdcloud
+order: 1
+input:
+  accessKeyId:
+    title: AccessKeyID
+    component:
+      placeholder: AccessKeyID
+    helper: '[获取密钥](https://uc.jdcloud.com/account/accesskey)'
+    required: true
+  secretAccessKey:
+    title: SecretAccessKey
+    component:
+      placeholder: SecretAccessKey
+    required: true
+    encrypt: true
+  testRequest:
+    title: 测试
+    component:
+      name: api-test
+      action: TestRequest
+    helper: 点击测试接口是否正常
+pluginType: access
+type: builtIn
+scriptFilePath: /plugins/plugin-jdcloud/access.js

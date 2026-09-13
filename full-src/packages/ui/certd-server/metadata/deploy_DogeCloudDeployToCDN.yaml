@@ -1,0 +1,84 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: DogeCloudDeployToCDN
+title: 多吉云-部署到多吉云CDN
+icon: svg:icon-dogecloud
+group: cdn
+input:
+  cert:
+    title: 证书
+    helper: 请选择前置任务输出的域名证书
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+    required: true
+    order: 0
+  certDomains:
+    title: 当前证书域名
+    component:
+      name: cert-domains-getter
+    mergeScript: |2-
+
+              return {
+                component:{
+                    inputKey: ctx.compute(({form})=>{
+                      return form.cert
+                    }),
+                }
+              }
+              
+    template: false
+    required: false
+    order: 0
+  accessId:
+    title: 多吉云授权
+    helper: 多吉云AccessKey
+    component:
+      name: access-selector
+      type: dogecloud
+    rules:
+      - required: true
+        message: 此项必填
+    order: 0
+  domain:
+    title: CDN域名
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetDomainList
+      search: false
+      pager: false
+      single: false
+      watches:
+        - certDomains
+        - accessId
+    required: true
+    mergeScript: |2-
+
+                return {
+                  component:{
+                    form: ctx.compute(({form})=>{
+                      return form
+                    })
+                  },
+               }
+              
+    helper: 请选择CDN域名，可以选择多个，一次性部署
+    order: 0
+  ignoreDeployNullCode:
+    title: 忽略部署接口报错
+    helper: 当该域名部署后报错，但是实际上已经部署成功时，可以勾选
+    value: false
+    component:
+      name: a-switch
+      type: checked
+    order: 0
+output: {}
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-doge/plugins/deploy-to-cdn/index.js

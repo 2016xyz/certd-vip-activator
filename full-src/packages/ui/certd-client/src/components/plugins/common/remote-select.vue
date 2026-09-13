@@ -1,0 +1,289 @@
+<template>
+  <div class="remote-select">
+    <div class="flex flex-row">
+      <a-select ref="selectRef" class="remote-select-input" show-search :filter-option="filterOption" :options="optionsRef" :value="value" v-bind="attrs" @click="onClick" @update:value="updateValue($event)">
+        <template #dropdownRender="{ menuNode: menu }">
+          <template v-if="search">
+            <div class="flex w-full" style="padding: 4px 8px">
+              <a-input ref="inputRef" v-model:value="searchKeyRef" class="flex-1" allow-clear :placeholder="t('certd.pluginCommon.searchKeyword')" @keydown.enter="doSearch" />
+              <a-button class="ml-2" :loading="loading" type="text" @click="doSearch">
+                <template #icon>
+                  <search-outlined />
+                </template>
+                {{ t("certd.pluginCommon.search") }}
+              </a-button>
+            </div>
+            <div v-if="hasError" class="helper p-2" :class="{ error: hasError }">
+              {{ message }}
+            </div>
+            <a-divider style="margin: 4px 0" />
+          </template>
+          <v-nodes :vnodes="menu" />
+
+          <div v-if="pager === true" class="pager text-center p-5">
+            <a-pagination v-model:current="pagerRef.pageNo" simple :total="pagerRef.total" :page-size="pagerRef.pageSize" @change="onPageChange" />
+          </div>
+        </template>
+      </a-select>
+      <div class="ml-5 flex flex-row no-wrap">
+        <fs-button :loading="loading" :title="t('certd.pluginCommon.refreshOptions')" icon="ion:refresh-outline" @click="refreshOptions"></fs-button>
+        <UploadCert v-if="uploadCert" class="ml-5" v-bind="uploadCert" @submit="refreshOptions"></UploadCert>
+      </div>
+    </div>
+    <div class="helper" :class="{ error: hasError }">
+      {{ message }}
+    </div>
+  </div>
+</template>
+<script setup lang="ts">
+import { ComponentPropsType, doRequest } from "/@/components/plugins/lib";
+import { defineComponent, inject, ref, useAttrs, watch, Ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { PluginDefine } from "@certd/pipeline";
+import { getInputFromForm } from "./utils";
+import UploadCert from "./upload-cert.vue";
+import { UploadCertProps } from "./types";
+
+defineOptions({
+  name: "RemoteSelect",
+});
+
+const { t } = useI18n();
+
+const selectRef = ref(null);
+
+const VNodes = defineComponent({
+  props: {
+    vnodes: {
+      type: Object,
+      required: true,
+    },
+  },
+  render() {
+    return this.vnodes;
+  },
+});
+
+const props = defineProps<
+  {
+    watches?: string[];
+    search?: boolean;
+    pager?: boolean;
+    single?: boolean;
+    pageSize?: number;
+    emitImmediate?: boolean;
+    uploadCert?: UploadCertProps;
+  } & ComponentPropsType
+>();
+const emit = defineEmits<{
+  "update:value": any;
+  "selected-change": any;
+}>();
+
+function updateValue(value: any) {
+  if (props.single === true) {
+    const last = value?.[value.length - 1];
+    emit("update:value", last);
+    emitSelectedChange(last);
+    selectRef.value.blur();
+  } else {
+    emit("update:value", value);
+    emitSelectedChange(value);
+  }
+}
+
+/**
+ * 选中值变化时，通过 selected-change 事件把选中的 option 对象发射出去，
+ * 供字段 mergeScript 里 on: { "selected-change": (scope) => {...} } 联动使用
+ * （如根据选项的 needEAB 显隐其他字段）。单选发射单个 option，多选发射 option 数组。
+ */
+function emitSelectedChange(value: any) {
+  const values = Array.isArray(value) ? value : [value];
+  const options = values.map(v => optionsRef.value.find((item: any) => item.value === v)).filter(Boolean);
+  emit("selected-change", props.single === true ? options[0] : options);
+}
+
+const attrs = useAttrs();
+
+const getCurrentPluginDefine: any = inject("getCurrentPluginDefine", () => {
+  return {};
+});
+const getScope: any = inject("get:scope", () => {
+  return {};
+});
+const getPluginType: any = inject("get:plugin:type", () => {
+  return "plugin";
+});
+
+const searchKeyRef = ref("");
+const optionsRef = ref([]);
+const message = ref("");
+const hasError = ref(false);
+const loading = ref(false);
+const pagerRef: Ref = ref({
+  pageNo: 1,
+  total: 0,
+  pageSize: props.pageSize || 50,
+});
+
+let isFirst = true;
+const getOptions = async () => {
+  if (loading.value) {
+    return;
+  }
+
+  if (!getCurrentPluginDefine) {
+    return;
+  }
+
+  const define: PluginDefine = getCurrentPluginDefine()?.value;
+  if (!define) {
+    return;
+  }
+  const pluginType = getPluginType();
+  const { form } = getScope();
+  const { input, record } = getInputFromForm(form, pluginType);
+
+  for (let key in define.input) {
+    const inWatches = props.watches?.includes(key);
+    const inputDefine = define.input[key];
+    if (inWatches && inputDefine.required) {
+      const value = input[key];
+      if (value == null || value === "") {
+        console.log("remote-select required", key);
+        return;
+      }
+    }
+  }
+  message.value = "获取中...";
+  hasError.value = false;
+  loading.value = true;
+  const pageNo = pagerRef.value.pageNo;
+  const pageSize = pagerRef.value.pageSize;
+  try {
+    const res = await doRequest(
+      {
+        type: pluginType,
+        typeName: form.type,
+        action: props.action,
+        input,
+        record,
+        data: {
+          searchKey: props.search ? searchKeyRef.value : "",
+          pageNo,
+          pageSize,
+        },
+      },
+      {
+        onError(err: any) {
+          hasError.value = true;
+          message.value = t("certd.pluginCommon.getOptionsError", { message: err.message });
+          optionsRef.value = [];
+        },
+        showErrorNotify: false,
+      }
+    );
+    let list = res?.list || res || [];
+    if (list.length > 0) {
+      message.value = t("certd.pluginCommon.getDataSuccessSelect");
+    } else {
+      message.value = t("certd.pluginCommon.getDataSuccessEmpty");
+    }
+    list = list.map((item: any) => {
+      return {
+        ...item,
+        title: `${item.domain || item.value}`,
+      };
+    });
+    optionsRef.value = list;
+    pagerRef.value.total = list.length;
+    if (props.pager) {
+      if (res.pageNo != null) {
+        pagerRef.value.pageNo = res.pageNo ?? 1;
+      }
+      if (res.pageSize != null) {
+        pagerRef.value.pageSize = res.pageSize ?? pageSize;
+      }
+      if (res.total != null) {
+        pagerRef.value.total = res.total ?? list.length;
+      }
+    }
+
+    if (isFirst) {
+      isFirst = false;
+      if (props.value && props.emitImmediate) {
+        emitSelectedChange(props.value);
+        emit("update:value", props.value);
+      }
+      return;
+    }
+
+    return res;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const filterOption = (input: string, option: any) => {
+  return option.label.toLowerCase().includes(input.toLowerCase()) || String(option.value).toLowerCase().includes(input.toLowerCase());
+};
+
+async function onClick() {
+  if (optionsRef.value?.length === 0) {
+    await refreshOptions();
+  }
+}
+
+async function refreshOptions() {
+  await getOptions();
+}
+
+async function doSearch() {
+  pagerRef.value.pageNo = 1;
+  await refreshOptions();
+}
+
+watch(
+  () => {
+    const pluginType = getPluginType();
+    const { form, key } = getScope();
+    const { input, record } = getInputFromForm(form, pluginType);
+    const watches: any = {};
+    if (props.watches && props.watches.length > 0) {
+      for (const key of props.watches) {
+        watches[key] = input[key];
+      }
+    }
+
+    return {
+      form: watches,
+      key,
+    };
+  },
+  async (value, oldValue) => {
+    const { form } = value;
+    const oldForm: any = oldValue?.form;
+    let changed = oldForm == null || optionsRef.value.length == 0;
+    if (props.watches && props.watches.length > 0) {
+      for (const key of props.watches) {
+        if (oldForm && JSON.stringify(form[key]) != JSON.stringify(oldForm[key])) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (changed) {
+      await getOptions();
+    }
+  },
+  {
+    immediate: true,
+  }
+);
+
+async function onPageChange(current: any) {
+  await refreshOptions();
+}
+</script>
+
+<style lang="less"></style>

@@ -1,0 +1,167 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: CopyToLocal
+title: 主机-复制到本机
+icon: solar:copy-bold-duotone
+desc: 【仅管理员使用】实际上是复制证书到docker容器内的某个路径，需要做目录映射到宿主机
+group: host
+input:
+  cert:
+    title: 域名证书
+    helper: 请选择前置任务输出的域名证书
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+    required: true
+    order: 0
+  certType:
+    title: 证书类型
+    helper: 要部署的证书格式，支持pem、pfx、der、jks格式
+    component:
+      name: a-select
+      options:
+        - value: pem
+          label: pem(crt)，用于Nginx等大部分应用
+        - value: pfx
+          label: pfx，一般用于IIS
+        - value: der
+          label: der，一般用于Apache
+        - value: jks
+          label: jks，一般用于JAVA应用
+    required: true
+    order: 0
+  crtPath:
+    title: 证书保存路径
+    helper: |-
+      全链证书，路径要包含文件名
+      推荐使用相对路径，将写入与数据库同级目录，无需映射，例如：tmp/cert.pem
+    component:
+      placeholder: tmp/full_chain.pem
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'pem';
+              })
+            }
+          
+    required: true
+    rules:
+      - type: filepath
+    order: 0
+  keyPath:
+    title: 私钥保存路径
+    helper: |-
+      路径要包含文件名
+      推荐使用相对路径，将写入与数据库同级目录，无需映射，例如：tmp/cert.key
+    component:
+      placeholder: tmp/cert.key
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'pem';
+              })
+            }
+          
+    required: true
+    rules:
+      - type: filepath
+    order: 0
+  icPath:
+    title: 中间证书保存路径
+    helper: 路径要包含文件名，一般情况传上面两个文件就行了，极少数情况需要这个中间证书
+    component:
+      placeholder: /root/deploy/nginx/intermediate.pem
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'pem';
+              })
+            }
+          
+    rules:
+      - type: filepath
+    order: 0
+  pfxPath:
+    title: PFX证书保存路径
+    helper: |-
+      用于IIS证书部署，路径要包含文件名
+      推荐使用相对路径，将写入与数据库同级目录，无需映射，例如：tmp/cert.pfx
+    component:
+      placeholder: tmp/cert.pfx
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'pfx';
+              })
+            }
+          
+    required: true
+    rules:
+      - type: filepath
+    order: 0
+  derPath:
+    title: DER证书保存路径
+    helper: |-
+      用于Apache证书部署，路径要包含文件名
+      推荐使用相对路径，将写入与数据库同级目录，无需映射，例如：tmp/cert.der
+      .der和.cer是相同的东西，改个后缀名即可
+    component:
+      placeholder: tmp/cert.der 或 tmp/cert.cer
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'der';
+              })
+            }
+          
+    required: true
+    rules:
+      - type: filepath
+    order: 0
+  jksPath:
+    title: jks证书保存路径
+    helper: 用于java，路径要包含文件名，例如：tmp/cert.jks
+    component:
+      placeholder: tmp/cert.jks
+    mergeScript: |2-
+
+            return {
+              show: ctx.compute(({form})=>{
+                return form.certType === 'jks';
+              })
+            }
+          
+    required: true
+    rules:
+      - type: filepath
+    order: 0
+output:
+  hostCrtPath:
+    title: 证书保存路径
+    type: HostCrtPath
+  hostKeyPath:
+    title: 私钥保存路径
+    type: HostKeyPath
+  hostIcPath:
+    title: 中间证书保存路径
+    type: HostKeyPath
+  hostPfxPath:
+    title: PFX保存路径
+    type: HostPfxPath
+  hostDerPath:
+    title: DER保存路径
+    type: HostDerPath
+  hostJksPath:
+    title: jks保存路径
+    type: HostJksPath
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-host/plugin/copy-to-local/index.js

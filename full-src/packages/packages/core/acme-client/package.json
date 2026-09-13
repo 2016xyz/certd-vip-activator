@@ -1,0 +1,80 @@
+{
+    "name": "@certd/acme-client",
+    "description": "Simple and unopinionated ACME client",
+    "private": false,
+    "author": "nmorsman",
+    "version": "1.44.3",
+    "type": "module",
+    "module": "./dist/index.js",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "license": "MIT",
+    "homepage": "https://github.com/publishlab/node-acme-client",
+    "engines": {
+        "node": ">= 18"
+    },
+    "files": [
+        "dist",
+        "types"
+    ],
+    "dependencies": {
+        "@certd/basic": "^1.44.3",
+        "@peculiar/x509": "^1.11.0",
+        "asn1js": "^3.0.5",
+        "axios": "^1.9.0",
+        "debug": "^4.3.5",
+        "http-proxy-agent": "^7.0.2",
+        "https-proxy-agent": "^7.0.5",
+        "lodash-es": "^4.17.21",
+        "node-forge": "^1.3.1",
+        "punycode.js": "^2.3.1"
+    },
+    "devDependencies": {
+        "@types/node": "^20.14.10",
+        "@typescript-eslint/eslint-plugin": "^8.26.1",
+        "@typescript-eslint/parser": "^8.26.1",
+        "chai": "^5.1.0",
+        "chai-as-promised": "^7.1.2",
+        "cross-env": "^7.0.3",
+        "eslint": "^8.57.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-import": "^2.29.1",
+        "eslint-plugin-prettier": "^5.1.3",
+        "esmock": "^2.7.5",
+        "mocha": "^10.6.0",
+        "nock": "^13.5.4",
+        "prettier": "3.3.3",
+        "rimraf": "^5.0.5",
+        "ts-node": "^10.9.2",
+        "tsd": "^0.31.1",
+        "typescript": "^5.4.2"
+    },
+    "scripts": {
+        "before-build": "rimraf dist && rimraf dist-test && rimraf tsconfig.tsbuildinfo && rimraf .rollup.cache",
+        "build": "npm run before-build && tsc -p tsconfig.build.json --skipLibCheck",
+        "lint": "eslint --fix \"src/**/*.ts\" \"types/**/*.ts\"",
+        "lint-types": "tsd --files \"types/index.test-d.ts\"",
+        "prepublishOnly": "npm run build",
+        "test": "mocha -t 60000 \"test/setup.js\" \"test/**/*.spec.js\"",
+        "test:unit": "cross-env NODE_ENV=unittest mocha --node-option no-warnings --node-option loader=ts-node/esm \"src/**/*.test.ts\"",
+        "pub": "npm publish",
+        "compile": " tsc --skipLibCheck --watch",
+        "format": "prettier --write src"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/publishlab/node-acme-client"
+    },
+    "keywords": [
+        "acme",
+        "client",
+        "lets",
+        "encrypt",
+        "acmev2",
+        "boulder"
+    ],
+    "bugs": {
+        "url": "https://github.com/publishlab/node-acme-client/issues"
+    },
+    "gitHead": "cc60cd4cd1d914110be65284bcf16cd3c5a63b8d"
+}

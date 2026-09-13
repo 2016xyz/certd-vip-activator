@@ -1,0 +1,39 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: JDCloudUploadCert
+title: 京东云-上传新证书
+icon: svg:icon-jdcloud
+group: jdcloud
+desc: 上传证书到SSL数字证书中心
+input:
+  cert:
+    title: 域名证书
+    helper: 请选择前置任务输出的域名证书
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+        - JDCloudUploadCert
+    required: true
+    order: 0
+  accessId:
+    title: Access授权
+    helper: 京东云AccessKeyId、AccessKeySecret
+    component:
+      name: access-selector
+      type: jdcloud
+    required: true
+    order: 0
+  certName:
+    title: 证书名称前缀
+    helper: 证书形成，默认为certd
+    required: false
+    order: 0
+output:
+  jdcloudCertId:
+    title: 上传成功后的京东云CertId
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-jdcloud/plugins/plugin-upload-cert.js

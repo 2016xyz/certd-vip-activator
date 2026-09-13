@@ -1,0 +1,126 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: DemoTest
+title: Demo-测试插件
+icon: clarity:plugin-line
+group: other
+input:
+  text:
+    title: 属性示例
+    value: 默认值
+    component:
+      name: a-input
+      vModel: value
+    helper: 帮助说明,[链接](https://certd.docmirror.cn)
+    required: false
+    order: 0
+  select:
+    title: 选择框
+    component:
+      name: a-auto-complete
+      vModel: value
+      options:
+        - value: show
+          label: 动态显
+        - value: hide
+          label: 动态隐
+    order: 0
+  showText:
+    title: 动态显隐
+    helper: 我会根据选择框的值进行显隐
+    show: true
+    mergeScript: |2-
+
+          return {
+            show: ctx.compute(({form})=>{
+              return form.select === 'show';
+            })
+          }
+          
+    order: 0
+  multiSelect:
+    title: 多选框
+    component:
+      name: a-select
+      vModel: value
+      mode: tags
+      multiple: true
+      options:
+        - value: '1'
+          label: 选项1
+        - value: '2'
+          label: 选项2
+    order: 0
+  switch:
+    title: switch
+    component:
+      name: a-switch
+      vModel: checked
+    order: 0
+  cert:
+    title: 域名证书
+    helper: 请选择前置任务输出的域名证书
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+    order: 0
+  certDomains:
+    title: 当前证书域名
+    component:
+      name: cert-domains-getter
+    mergeScript: |2-
+
+              return {
+                component:{
+                    inputKey: ctx.compute(({form})=>{
+                      return form.cert
+                    }),
+                }
+              }
+              
+    template: false
+    required: false
+    order: 0
+  accessId:
+    title: demo授权
+    helper: demoAccess授权
+    component:
+      name: access-selector
+      type: demo
+    order: 0
+  siteName:
+    title: 从后端获取选项
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetSiteList
+      search: false
+      pager: false
+      single: false
+      watches:
+        - certDomains
+        - accessId
+        - certDomains
+        - accessId
+    required: true
+    mergeScript: |2-
+
+                return {
+                  component:{
+                    form: ctx.compute(({form})=>{
+                      return form
+                    })
+                  },
+               }
+              
+    helper: 选择时可以从后端获取选项
+    order: 0
+output: {}
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-demo/plugins/plugin-test.js

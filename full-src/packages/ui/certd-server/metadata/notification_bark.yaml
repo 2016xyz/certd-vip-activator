@@ -1,0 +1,21 @@
+name: bark
+title: Bark 通知
+desc: Bark 推送通知插件
+needPlus: true
+input:
+  webhook:
+    title: 服务地址
+    component:
+      placeholder: https://api.day.app/your_key
+    required: true
+    helper: 你的bark服务地址+key
+  skipSslVerify:
+    title: 忽略证书校验
+    value: false
+    component:
+      name: a-switch
+      vModel: checked
+    required: false
+pluginType: notification
+type: builtIn
+scriptFilePath: /plugins/plugin-notification/bark/index.js

@@ -1,0 +1,21 @@
+name: AliyunSdk
+version: 1.0.0
+title: 阿里云SDK
+desc: 阿里云SDK
+icon: fa-cloud
+author:
+pluginType: sdk
+metadata:
+  types: |
+    {
+      AliyunClient: xxx
+    }
+script: |
+  class AliyunClient extends BaseAccess {
+    accessKeyId = '';
+    secretAccessKey = '';
+  }
+
+  return {
+    AliyunClient
+  }

@@ -1,0 +1,192 @@
+showRunStrategy: false
+default:
+  strategy:
+    runStrategy: 1
+name: AliyunDeployCertToSLB
+title: 阿里云-部署至CLB(传统负载均衡)
+icon: svg:icon-aliyun
+group: aliyun
+desc: 部署证书到阿里云CLB(传统负载均衡)
+needPlus: false
+input:
+  cert:
+    title: 域名证书
+    helper: |-
+      请选择证书申请任务输出的域名证书
+      或者选择前置任务“上传证书到阿里云”任务的证书ID，可以减少上传到阿里云的证书数量
+    component:
+      name: output-selector
+      from:
+        - ':cert:'
+        - uploadCertToAliyun
+    required: true
+    order: 0
+  certDomains:
+    title: 当前证书域名
+    component:
+      name: cert-domains-getter
+    mergeScript: |2-
+
+              return {
+                component:{
+                    inputKey: ctx.compute(({form})=>{
+                      return form.cert
+                    }),
+                }
+              }
+              
+    template: false
+    required: false
+    order: 0
+  casEndpoint:
+    title: 证书接入点
+    helper: 不会选就保持默认即可
+    value: cas.aliyuncs.com
+    component:
+      name: a-select
+      options:
+        - value: cas.aliyuncs.com
+          label: 中国大陆
+        - value: cas.ap-southeast-1.aliyuncs.com
+          label: 新加坡
+        - value: cas.eu-central-1.aliyuncs.com
+          label: 德国（法兰克福）
+    required: true
+    order: 0
+  accessId:
+    title: Access授权
+    helper: 阿里云授权AccessKeyId、AccessKeySecret
+    component:
+      name: access-selector
+      type: aliyun
+    required: true
+    order: 0
+  regionId:
+    title: LB所在地区
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetRegionList
+      search: false
+      pager: false
+      single: true
+      watches:
+        - certDomains
+        - accessId
+        - accessId
+    required: true
+    mergeScript: |2-
+
+                return {
+                  component:{
+                    form: ctx.compute(({form})=>{
+                      return form
+                    })
+                  },
+               }
+              
+    helper: 请选择
+    order: 0
+  loadBalancers:
+    title: 负载均衡列表
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetLoadBalanceList
+      search: false
+      pager: false
+      single: false
+      watches:
+        - certDomains
+        - accessId
+        - regionId
+    required: true
+    mergeScript: |2-
+
+                return {
+                  component:{
+                    form: ctx.compute(({form})=>{
+                      return form
+                    })
+                  },
+               }
+              
+    helper: 要部署证书的负载均衡ID
+    order: 0
+  listeners:
+    title: 监听器列表
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetListenerList
+      search: false
+      pager: false
+      single: false
+      watches:
+        - certDomains
+        - accessId
+        - loadBalancers
+    required: true
+    mergeScript: |2-
+
+                return {
+                  component:{
+                    form: ctx.compute(({form})=>{
+                      return form
+                    })
+                  },
+               }
+              
+    helper: 要部署证书的监听器列表
+    order: 0
+  deployDefault:
+    title: 部署默认证书
+    value: true
+    component:
+      name: a-switch
+      vModel: checked
+    order: 0
+  deployExtension:
+    title: 部署扩展证书
+    value: false
+    component:
+      name: a-switch
+      vModel: checked
+    order: 0
+  extensionDomains:
+    title: 扩展域名列表
+    component:
+      name: remote-select
+      vModel: value
+      mode: tags
+      type: plugin
+      action: onGetExtensionDomainList
+      search: false
+      pager: false
+      single: false
+      watches:
+        - certDomains
+        - accessId
+        - listeners
+        - deployExtension
+    required: true
+    mergeScript: |2-
+
+              return {
+              show: ctx.compute(({form})=>{
+                return form.deployExtension;
+              })
+            }
+            
+    helper: 要部署扩展域名列表
+    order: 0
+output: {}
+pluginType: deploy
+type: builtIn
+scriptFilePath: /plugins/plugin-aliyun/plugin/deploy-to-slb/index.js
