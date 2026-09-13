@@ -1,0 +1,37 @@
+version: '3.3'
+
+services:
+  certd:
+    image: certd/certd:latest
+    container_name: certd
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./patched/plus-core-patched.js:/app/node_modules/@certd/plus-core/dist/index.js:ro
+    ports:
+      - "7001:7001"
+      - "7002:7002"
+    environment:
+      - TZ=Asia/Shanghai
+      - certd_system_resetAdminPasswd=false
+      - certd_koa_hostname=0.0.0.0
+      # 激活服务器 → 本地 fake server（动态签发, 按本站 siteId 实时签名）
+      - PLUS_SERVER_BASE_URL=http://certd-fake-plus-server:11007
+    depends_on:
+      - certd-fake-plus-server
+
+  certd-fake-plus-server:
+    image: python:3.11-alpine
+    container_name: certd-fake-plus-server
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./PoC/fake_plus_server.py:/app/fake_plus_server.py:ro
+      - ./patched/selfsign_key.pem:/app/selfsign_key.pem:ro
+    command: sh -c "pip install -i https://pypi.tuna.tsinghua.edu.cn/simple cryptography >/dev/null 2>&1 && python /app/fake_plus_server.py"
+    environment:
+      - CERTD_FAKE_SERVER_PORT=11007
+      - CERTD_SELF_KEY=/app/selfsign_key.pem
+      - CERTD_VIP_TYPE=plus
+    ports:
+      - "11007:11007"
