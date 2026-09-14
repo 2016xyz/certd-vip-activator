@@ -67,7 +67,59 @@ Certd 是开源证书自动化申请+部署平台。官方镜像 `certd/certd:<t
 
 ## 三、Docker 方式部署（推荐）
 
-### 方式 A：预构建 VIP 镜像一键部署（最少配置）
+### 方式 ⓪ 全自动一键安装（最推荐 · 全发行版）★NEW
+
+**在全新 Linux 机器上一行命令搞定【Docker 安装 + 镜像拉取 + 启动 + VIP 激活 + 终态验证】：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/2016xyz/certd-vip-activator/main/docker/vip-deploy/install-certd-vip.sh -o install.sh && sudo bash install.sh
+```
+
+国内服务器（GitHub raw 访问慢）：
+
+```bash
+git clone https://github.com/2016xyz/certd-vip-activator.git && sudo bash certd-vip-activator/docker/vip-deploy/install-certd-vip.sh
+```
+
+**脚本能力一览：**
+
+| 步骤 | 动作 |
+|---|---|
+| 系统识别 | Ubuntu / Debian / CentOS / RHEL / Rocky / AlmaLinux / Fedora / openEuler / Arch 自动判定 |
+| Docker 安装 | 未装自动装（优先 aliyun 镜像源加速，失败回退官方），已装跳过 |
+| 基础依赖 | 自动补 curl / ca-certificates 等最小依赖 |
+| 镜像双源拉取 | `ghcr.io/2016xyz/certd-vip:latest` 失败自动试 `ghcr.dockerproxy.com` |
+| 容器启动 | 7001(http) / 7002(https)，`./data` 宿主化持久化 |
+| 端口冲突检测 | 若被占用提示输入新端口 |
+| 自动激活 | 内置 auto-activate watch → 检查 license → 兜底 → grep「授权校验成功」终态 |
+| 输出访问信息 | 外网IP / 本地IP / 默认账号 / 常用命令 / 升级 / 切 comm 全集 |
+
+**环境变量定制**：
+
+```bash
+VIP_TYPE=comm bash install-certd-vip.sh            # 默认签发 comm（商业版）
+CERTD_HTTP_PORT=8001 bash install-certd-vip.sh     # 自定义 http 端口
+DATA_DIR=/data/certd bash install-certd-vip.sh     # 自定义数据目录
+CONTAINER_NAME=certd2 bash install-certd-vip.sh    # 多实例并存
+```
+
+**实测终端输出**（已在 Kali/Debian 环境跑通 + 服务器复现）：
+
+```
+[certd-vip] 检测到系统: Kali GNU/Linux Rolling
+[certd-vip] Docker 已安装: 28.5.2+dfsg4
+[certd-vip] 镜像拉取完成
+[certd-vip] 启动 certd (VIP=plus, http=7001, https=7002)...
+[certd-vip] ✅ VIP 激活: 授权校验成功：plus，到期时间：永久
+访问地址:
+  外网:  http://43.133.237.180:7001
+  本地:  http://192.168.12.231:7001
+默认账号:  admin / 123456   (首次登录强制改密)
+授权状态:  后台 → 系统设置 → 授权信息 → plus / 永久
+数据目录:  /opt/certd-vip/data (备份此目录即可容灾)
+```
+
+### 方式 A：预构建 VIP 镜像一键部署（最少配置，手动版）
 
 ```bash
 mkdir -p /opt/certd-vip/data && docker run -d \
