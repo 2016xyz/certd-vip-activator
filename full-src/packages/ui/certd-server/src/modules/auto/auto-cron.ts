@@ -123,7 +123,7 @@ export class AutoCron {
         }
         const siteInfo = await this.sysSettingsService.getSetting<SysSiteInfo>(SysSiteInfo);
 
-        const appTitle = siteInfo.title || "certd";
+        const appTitle = siteInfo.title || "certd-x";
         const expiresDate = dayjs(plusInfo.expireTime).format("YYYY-MM-DD");
         // plusInfo.expireTime= dayjs("2025-06-10").valueOf()
         const expiresDays = Math.floor((plusInfo.expireTime - new Date().getTime()) / 1000 / 60 / 60 / 24);

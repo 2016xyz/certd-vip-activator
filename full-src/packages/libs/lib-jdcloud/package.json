@@ -1,6 +1,6 @@
 {
   "name": "@certd/jdcloud",
-  "version": "1.44.3",
+  "version": "1.0.0-2026.9.14",
   "description": "jdcloud openApi sdk",
   "main": "./dist/bundle.js",
   "module": "./dist/bundle.js",

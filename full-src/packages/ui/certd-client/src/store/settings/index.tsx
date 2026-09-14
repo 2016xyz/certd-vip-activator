@@ -83,7 +83,7 @@ export const useSettingStore = defineStore({
       registerEnabled: false,
       managerOtherUserPipeline: false,
       icpNo: env.ICP_NO || "",
-      homePageEnabled: true,
+      homePageEnabled: false,   // certd-x: 默认禁用 marketing 首页, 直接登录
     },
     installInfo: {
       siteId: "",

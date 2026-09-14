@@ -68,7 +68,7 @@ export class EmailService implements IEmailService {
       throw new Error("收件人不能为空");
     }
 
-    let sysTitle = "Certd";
+    let sysTitle = "certd-x";
     if (isComm()) {
       const siteInfo = await this.sysSettingsService.getSetting<SysSiteInfo>(SysSiteInfo);
       if (siteInfo) {

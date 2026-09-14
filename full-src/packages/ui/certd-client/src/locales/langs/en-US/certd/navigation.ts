@@ -1,9 +1,9 @@
 export default {
   framework: {
-    title: "Framework",
+    title: "certd-x",
     home: "Home",
   },
-  title: "Certificate Automation",
+  title: "certd-x",
   pipeline: "Pipeline",
   pipelineEdit: "Edit Pipeline",
   history: "Execution History",

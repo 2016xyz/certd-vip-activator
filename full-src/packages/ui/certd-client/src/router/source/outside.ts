@@ -4,12 +4,12 @@ const errorPage = [{ path: "/:pathMatch(.*)*", name: "not-found", component: Err
 export const outsideResource = [
   {
     meta: {
-      title: "首页",
+      title: "登录",
       isMenu: false,
     },
-    name: "landing",
+    name: "landing",   // certd-x: 根路径直接显示登录页 (不再有 marketing landing)
     path: "/",
-    component: "/framework/landing/index.vue",
+    redirect: "/login",
   },
   {
     title: "outside",

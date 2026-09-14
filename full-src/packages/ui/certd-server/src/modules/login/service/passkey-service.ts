@@ -24,7 +24,7 @@ export class PasskeyService extends BaseService<PasskeyEntity> {
   }
 
   async getRpInfo(ctx: any) {
-    let rpName = "Certd";
+    let rpName = "certd-x";
     if (isComm()) {
       const siteInfo = await this.sysSettingsService.getSetting<SysSiteInfo>(SysSiteInfo);
       rpName = siteInfo.title || rpName;

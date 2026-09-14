@@ -1,10 +1,10 @@
 export default {
   framework: {
-    title: "框架",
+    title: "certd-x",
     home: "首页",
   },
-  title: "证书自动化",
-  pipeline: "证书自动化流水线",
+  title: "certd-x 证书自动化",
+  pipeline: "certd-x 证书自动化流水线",
   pipelineEdit: "编辑流水线",
   history: "执行历史记录",
   certStore: "证书仓库",
