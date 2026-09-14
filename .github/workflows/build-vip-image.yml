@@ -178,12 +178,14 @@ jobs:
           npm install -g pnpm@10.33.4
           # 根目录 pnpm install (workspace Links 就绪)
           pnpm install --registry=https://registry.npmmirror.com
-          # 构建 libs (lerna run build, containment 在 packages/libs/* 和 packages/core/*)
-          # 等价官方流水线的 $SUDO_CMD_E lerna run build
-          npx -y lerna@8 run build --concurrency 4 --no-progress 2>&1 | tail -40 || true
-          # 再构建 certd-client (产物 dist/)
+          # 构建 workspace 内部包 (pnpm 原生, 不用 lerna; workspace-concurrency 1 保证顺序)
+          # 排除 certd-server (它编译依赖 certd-client/dist, 单独最后构建) 
+          pnpm -r --workspace-concurrency=1 run --if-present build \
+            --filter './packages/libs/**' \
+            --filter './packages/core/**'
+          # certd-client 依赖 libs dist → 最后构建 (产物 dist/)
           pnpm --filter @certd/ui-client run build
-          # 校验 dist 存在
+          # 校验关键产物
           test -f packages/ui/certd-client/dist/index.html
           test -f packages/libs/lib-iframe/dist/index.js
         working-directory: certd-src
