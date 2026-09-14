@@ -170,14 +170,24 @@ jobs:
           lfs: true
 
       # ============================
-      # Step 5: 组装 Docker Build Context
+      # Step 5: 预构建 certd-client (官方流程所需, 产物进 certd-client/dist)
+      # ============================
+      - name: Build certd-client
+        if: steps.check.outputs.need_build != 'false'
+        run: |
+          npm install -g pnpm@10.33.4
+          pnpm install
+          npm run build
+        working-directory: certd-src/packages/ui/certd-client
+
+      # ============================
+      # Step 5b: 组装 Docker 构建上下文
       # ============================
       - name: Prepare build context
         if: steps.check.outputs.need_build != 'false'
         run: |
           set -e
           mkdir -p build-context
-          # 复制 certd 映像基座 = packages/ui (certd-client/dist 已 LFS 带 down)
           cp -r certd-src/packages/ui/. build-context/
 
           # ★★ VIP 关键: patched plus-core, fake server, key, entrypoint
