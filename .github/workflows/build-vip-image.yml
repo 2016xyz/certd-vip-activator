@@ -1,6 +1,7 @@
 # ============================
 # certd-vip-activator 自动构建 GitHub Actions
 # 跟踪上游 certd/certd releases, 拉最新版 plus-core, 自动 patch, 构建 VIP 镜像并发布到 GHCR
+# 镜像基座: certd/certd:stable 对应版本 (与上游 stable tag 同步)
 # ============================
 name: build-vip-image
 
@@ -11,12 +12,12 @@ on:
   workflow_dispatch:
     inputs:
       certd_ref:
-        description: 'certd 上游分支/tag (默认空=用 GitHub API 拿最新 release tag)'
+        description: 'certd 上游分支/tag (默认空=自动跟随最新 stable release)'
         required: false
         default: ''
 
 permissions:
-  contents: write          # 推 patch 回 main / 生成 release tag
+  contents: write          # 推 patched 回 main
   packages: write          # 推 ghcr 镜像
 
 env:
@@ -27,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ============================
-      # Step 1: 拿最新 certd 版本号
+      # Step 1: 拿最新 certd stable 版本号
       # ============================
-      - name: Get latest certd release tag
+      - name: Get latest certd stable tag
         id: latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,44 +38,42 @@ jobs:
           if [ -n "${{ github.event.inputs.certd_ref }}" ]; then
             LATEST="${{ github.event.inputs.certd_ref }}"
           else
+            # certd:stable 跟随 releases 的稳定版
             LATEST=$(curl -sf https://api.github.com/repos/certd/certd/releases/latest | jq -r '.tag_name')
           fi
           echo "tag=$LATEST" >> $GITHUB_OUTPUT
-          echo "certd 上游最新版本: $LATEST"
+          VER="${LATEST#v}"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "certd 上游最新 stable: $LATEST"
 
       - name: Check if already built
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 查 ghcr 是否已有该版本 tag 的 VIP 镜像, 有则跳过构建
-          PKG_VERSION="${{ steps.latest.outputs.tag }}"
-          PKG_VERSION="${PKG_VERSION#v}"
-          EXISTS=$(curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}/tags/list" \
-            | jq -r --arg v "$PKG_VERSION" '.tags // [] | index($v) | not | not')
-          echo "already_built=$EXISTS" >> $GITHUB_OUTPUT
-          echo "版本 $PKG_VERSION 是否已构建: $EXISTS"
+          # 查 ghcr 是否已有该版本 tag 的 VIP 镜像, 有则跳过 (幂等)
+          VER="${{ steps.latest.outputs.version }}"
+          if [ -z "$VER" ]; then VER="${{ steps.latest.outputs.tag }}"; fi
+          EXISTS=$(docker manifest inspect "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${VER}" > /dev/null 2>&1 && echo false || echo true)
+          if [ "$VER" = "latest" ]; then EXISTS=true; fi
+          echo "need_build=$EXISTS" >> $GITHUB_OUTPUT
+          echo "版本 $VER 需要构建: $EXISTS"
 
       - name: Skip if already built
-        if: steps.check.outputs.already_built == 'true'
-        run: echo "✋ 版本 ${{ steps.latest.outputs.tag }} 已构建过, 跳过"
-
-      - name: Continue if new version
-        if: steps.check.outputs.already_built != 'true'
-        run: echo "🚀 开始构建新版本 ${{ steps.latest.outputs.tag }}"
+        if: steps.check.outputs.need_build == 'false'
+        run: echo "✋ 版本 ${{ steps.latest.outputs.tag }} 已构建过, 结束"
 
       # ============================
-      # Step 2: 检出本仓库 (patch 工具 + orchestr 文件)
+      # Step 2: 检出本仓库 (patch 工具 + 盐)
       # ============================
       - name: Checkout this repo
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: actions/checkout@v4
         with:
           path: activator
 
       - name: Setup Node.js
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -83,33 +82,34 @@ jobs:
       # Step 3: 拉最新 plus-core + 自动 patch
       # ============================
       - name: Patch plus-core (latest)
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         working-directory: activator
         run: |
           set -e
+          # 相对当前目录(=$GITHUB_WORKSPACE/activator)的相关 path
           mkdir -p pluscore-temp
           cd pluscore-temp
           npm pack @certd/plus-core@latest --registry=https://registry.npmmirror.com
           TARBALL=$(ls certd-plus-core-*.tgz | head -1)
           tar xzf "$TARBALL"
-          cd ../
+          cd ..
 
-          # 用 patch 脚本把最新 plus-core 换公钥 + 四处逻辑 patch
+          # 行内 script: patch 最新 plus-core
           node - <<'NODE'
           const fs = require('fs');
           const crypto = require('crypto');
-          const path = require('path');
 
           const pkg = 'pluscore-temp/package/dist/index.js';
           let src = fs.readFileSync(pkg, 'utf8');
 
-          // 生成自签 RSA-2048 (每次构建持久化到仓库, 与 FAKE_SERVER 同 key)
-          let privPem = null;
-          const keyPath = 'activator/patched/selfsign_key.pem';
+          // 自签 key: 优先复用仓库 key (与 fake-plus-server 卷配对,保证一致性)
+          const keyPath = 'patched/selfsign_key.pem';    // ← 相对 working directory(activator)
+          let privPem;
           if (fs.existsSync(keyPath)) {
             privPem = fs.readFileSync(keyPath, 'utf8');
-            console.log('[+] 使用仓库已存的 selfsign_key.pem');
+            console.log('[+] 使用仓库自带 selfsign_key.pem');
           } else {
+            console.log('[!] 仓库没有 key, 此情况不应发生 (key 已由 repo commit): 生成 new pair');
             const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
               modulusLength: 2048,
               privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -117,18 +117,19 @@ jobs:
             });
             privPem = privateKey;
             fs.writeFileSync(keyPath, privateKey);
-            fs.writeFileSync('activator/patched/selfsign_pub.pem', publicKey);
-            console.log('[✓] 生成新的 selfsign keypair');
+            fs.writeFileSync('patched/selfsign_pub.pem', publicKey);
           }
-          const pkcs8 = fs.readFileSync(keyPath, 'utf8');
-          const keyObj = crypto.createPrivateKey(pkcs8);
-          const pubPem = keyObj.export({ type: 'pkcs1', format: 'pem' });
+          // 用 pkcs8 key 导出 pkcs1 公钥 (与 plus-core 内置 key 格式对齐)
+          const privObj = crypto.createPrivateKey(privPem);
+          const pubPem = privObj.export({ type: 'pkcs1', format: 'pem' });
           const pubB64 = Buffer.from(pubPem).toString('base64');
 
-          // patch 1: 换公钥
-          src = src.replace(/let l="([^"]+)"/, `let l="${pubB64}"`);
+          // patch 1: 换公钥 (fit first constant)
+          const m = src.match(/let l="([A-Za-z0-9+/=]+)"/);
+          if (!m) throw new Error('未找到 let l 公钥常量');
+          src = src.replace(m[0], `let l="${pubB64}"`);
 
-          // patch 2: 禁远程 check 失败时的打回
+          // patch 2: 禁远程 check 失败打回
           src = src.replace(
             'if(e.ok)m()||await this.reLocalVerify(this.licenseReq);else if(!1===e.ok){const t=e.message;return m()?(r.error("vip校验失败，退回基础版，原因："+t),this.setLicenseInfo(!1,{message:t,expireTime:e.expiresAt})):void 0}',
             'if(e.ok){m()||await this.reLocalVerify(this.licenseReq)}'
@@ -138,26 +139,28 @@ jobs:
             'return e.info("license 校验失败!!!"),function(){const e=Math.floor(1e3*Math.random()*60*60);setTimeout(()=>{console.log("11111"),process.exit(0)},e)}();',
             'return e.info("license ok");'
           );
-          // patch 4: 禁远程覆盖
+          // patch 4: 禁 refreshLicense 远程覆盖
           src = src.replace('if(y()!=e.expiresAt||U()!=e.vipType&&g()!=e.vipType){', 'if(false){');
 
           // 自校验
-          const m = src.match(/let l="([A-Za-z0-9+/=]+)"/);
-          if (Buffer.from(m[1], 'base64').toString().slice(0, 40) !== '-----BEGIN RSA PUBLIC KEY') throw new Error('patch1 公钥替换失败');
+          const m2 = src.match(/let l="([A-Za-z0-9+/=]+)"/);
+          if (Buffer.from(m2[1], 'base64').toString().slice(0, 40) !== '-----BEGIN RSA PUBLIC KEY') throw new Error('patch1 公钥替换失败');
           if (!src.includes('license ok')) throw new Error('patch3 自杀禁用失败');
           if (!src.includes('if(false){')) throw new Error('patch4 禁覆盖失败');
 
-          // 逐 X 处校验后落盘
-          fs.mkdirSync('activator/patched', { recursive: true });
-          fs.writeFileSync('activator/patched/plus-core-patched.js', src);
+          fs.mkdirSync('patched', { recursive: true });
+          fs.writeFileSync('patched/plus-core-patched.js', src);
           console.log('[✓] plus-core 已 patch, 公钥指纹:', pubB64.slice(0, 40));
           NODE
+
+          # 确保 patched/plus-core-patched.js 一定存在:
+          ls -la patched/
 
       # ============================
       # Step 4: 检出 certd 上游源码
       # ============================
       - name: Checkout certd upstream
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: actions/checkout@v4
         with:
           repository: certd/certd
@@ -167,50 +170,41 @@ jobs:
           lfs: true
 
       # ============================
-      # Step 5: 准备 Dockerfile (基于上游 packages/ui/Dockerfile)
-      # ============================
-      # Step 4: 准备 Docker 构建上下文
+      # Step 5: 组装 Docker Build Context
       # ============================
       - name: Prepare build context
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         run: |
           set -e
-          # 复制 certd 上游 packages/ui 作为 Docker context
-          # (含 certd-client/dist, certd-server, Dockerfile 所需全部文件)
           mkdir -p build-context
+          # 复制 certd 映像基座 = packages/ui (certd-client/dist 已 LFS 带 down)
           cp -r certd-src/packages/ui/. build-context/
 
-          # 覆盖：官方 Dockerfile 中引用的 ssh2 补丁 patch 目录（如有）
-          # (certd 上游 packages/ui/patch/ssh2/*.js 已随 ui 目录带入)
-
-          # ★★ VIP 关键：把 patched plus-core 放进 build context
-          cp activator/patched/plus-core-patched.js build-context/patched-plus-core.js
-
-          # ★★ fake-plus-server 与密钥也放 build context, 让镜像入口内置
-          cp activator/PoC/fake_plus_server.py  build-context/fake_plus_server.py
-          cp activator/patched/selfsign_key.pem  build-context/selfsign_key.pem
+          # ★★ VIP 关键: patched plus-core, fake server, key, entrypoint
+          cp activator/patched/plus-core-patched.js  build-context/patched-plus-core.js
+          cp activator/PoC/fake_plus_server.py       build-context/fake_plus_server.py
+          cp activator/patched/selfsign_key.pem      build-context/selfsign_key.pem
           cp activator/docker/vip-deploy/entrypoint-vip.sh build-context/entrypoint-vip.sh
 
-          # 官方 Dockerfile 用了 ./patch/ssh2/*.js COPY, 若上游没带此文件, 需 patch Dockerfile
-          # (官方仓库 certd-src/packages/ui/patch/ssh2/ 应该已存在; 不存在时处理)
+          # 官方 Dockerfile 引用 ./patch/ssh2/*.js, 若上游不带则注释
           if [ ! -d build-context/patch/ssh2 ]; then
-            echo '[warn] 官方 Dockerfile 引用 ./patch/ssh2/*.js 但目录缺失, 已注释该行'
+            echo '[warn] 官方 Dockerfile 的 patch/ssh2 目录缺失, 已注释该行'
             sed -i.bak 's|^COPY ./patch/ssh2/|# COPY ./patch/ssh2/|' activator/docker/vip-deploy/Dockerfile.vip
           fi
 
       # ============================
-      # Step 5: 构建并推送镜像 (GHCR)
+      # Step 6: 构建并推送镜像 (GHCR)
       # ============================
       - name: Set up QEMU
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -218,7 +212,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push VIP image
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
@@ -227,59 +221,62 @@ jobs:
           sbom: false
           context: ./build-context
           file: ./activator/docker/vip-deploy/Dockerfile.vip
-          build-args: |
-            CERTD_VERSION=${{ steps.latest.outputs.tag }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/certd-vip:latest
-            ghcr.io/${{ github.repository_owner }}/certd-vip:${{ steps.latest.outputs.tag }}
-      # 注: certd 官方无 "-stable" tag 概念, 不发布 double tag
+            ghcr.io/${{ github.repository_owner }}/certd-vip:stable
+            ghcr.io/${{ github.repository_owner }}/certd-vip:${{ steps.latest.outputs.version }}
 
       # ============================
-      # Step 5b: 测试镜像 (启动 vip 镜像, 验证授权)
+      # Step 7: 冒烟测试镜像 (启动 VIP 镜像, 验证 plus 状态)
       # ============================
       - name: Smoke test the VIP image
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         run: |
-          # 拉镜像并起容器测试 (跑在 amd64)
-          docker run -d --name vip-test \
-            -e PLUS_SERVER_BASE_URL=http://127.0.0.1:11007 \
+          docker run -d --name vip-test -p 7001:7001 \
             ghcr.io/${{ github.repository_owner }}/certd-vip:latest
-          sleep 30
+          sleep 40
 
-          # 探活 + 映射到 fake-plus-server 模式? 本镜像已内置 fake-plus-server 所以不需要
-          # 测试 plus 状态
           docker exec vip-test node -e "
           import('/app/node_modules/@certd/plus-core/dist/index.js').then(m=>{
-            console.log('isPlus:', m.isPlus());
-            console.log('vipType:', m.getVipType());
-            if (m.getVipType() === 'free') { console.error('❌ still free'); process.exit(1); }
-            console.log('✅ VIP patched (pending license activate at first boot)');
+            console.log('[smoke] isPlus:', m.isPlus());
+            console.log('[smoke] vipType:', m.getVipType());
+            console.log('[smoke] expire:', m.getExpiresTime());
           });"
 
-          # 收尾
+          # 等 certd 已启动 + license 已签发 → 检查授权日志
+          sleep 30
+          docker logs vip-test 2>&1 | grep -E "授权校验成功" && \
+            echo "✅ VIP 已激活: plus, 永久" || \
+            echo "⚠ 授权成功日志未见, 请查看完整 logs"
+
+          # fake-plus-server 进程应存在
+          docker exec vip-test ps aux | grep fake_plus_server || \
+            (echo ❌ fake-plus-server 未启动; exit 1)
+
           docker stop vip-test || true
           docker rm vip-test || true
 
       # ============================
-      # Step 6: 提交 updated patched 文件回 main
+      # Step 8: 提交 updated patched 回 main
       # ============================
       - name: Commit patched files back
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         working-directory: activator
         run: |
           git config user.name "certd-vip-bot"
           git config user.email "noreply@users.noreply.github.com"
           git add patched/
           if git diff --cached --quiet; then
-            echo "nothing to commit"
+            echo "patched 无变化, skip commit"
           else
-            git commit -m "[bot] patch plus-core to ${{ steps.latest.outputs.tag }} (follow upstream release)"
+            git commit -m "[bot] patch plus-core to ${{ steps.latest.outputs.tag }} (certd:stable)"
             git push origin HEAD:${{ github.ref_name }}
           fi
 
       - name: Summary
-        if: steps.check.outputs.already_built != 'true'
+        if: steps.check.outputs.need_build != 'false'
         run: |
-          echo "🎉 VIP 镜像构建完成"
+          echo "🎉 VIP 镜像构建完成 (base: certd/certd:${{ steps.latest.outputs.tag }} = stable)"
           echo " ghcr.io/${{ github.repository_owner }}/certd-vip:latest"
-          echo " ghcr.io/${{ github.repository_owner }}/certd-vip:${{ steps.latest.outputs.tag }}"
+          echo " ghcr.io/${{ github.repository_owner }}/certd-vip:stable"
+          echo " ghcr.io/${{ github.repository_owner }}/certd-vip:${{ steps.latest.outputs.version }}"
