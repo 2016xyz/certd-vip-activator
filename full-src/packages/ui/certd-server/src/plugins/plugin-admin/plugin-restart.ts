@@ -18,7 +18,7 @@ export class RestartCertdPlugin extends AbstractTaskPlugin {
   async onInstance() {}
   async execute(): Promise<void> {
     this.checkAdmin();
-    this.logger.info("Certd https server 将在 3 秒后重启");
+    this.logger.info("certd-x https server 将在 3 秒后重启");
     await this.ctx.utils.sleep(3000);
     await httpsServer.restart();
   }

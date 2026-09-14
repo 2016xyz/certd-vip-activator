@@ -229,21 +229,15 @@ function isNewVersion(version: string, latestVersion: string) {
 }
 
 const hasNewVersion = computed(() => {
-  return isNewVersion(version.value, latestVersion.value);
+  return false;   // certd-x: 不提示版本过低
 });
 async function loadLatestVersion() {
   // version.value = settingsStore.app.version;  //前端有缓存 可能不准确
   latestVersion.value = await api.GetLatestVersion();
   console.log("latestVersion", latestVersion.value);
 
-  const minVersion = settingsStore.productInfo?.app?.minVersion;
-  if (minVersion) {
-    if (isNewVersion(version.value, minVersion)) {
-      notification.error({
-        message: settingsStore.productInfo?.app?.minVersionTip ?? "版本过低，为了您的数据安全，请尽快升级",
-      });
-    }
-  }
+  // certd-x: 关闭 minVersion 检查, 自定义版本号, 无需升级提醒
+
 }
 const settingStore = useSettingStore();
 const siteInfo: Ref<SiteInfo> = computed(() => {

@@ -27,7 +27,7 @@ export default {
   myTrade: "My Orders",
   inviteCommission: "Incentive Plan",
   paymentReturn: "Payment Return",
-  client: "Certd Client",
+  client: "certd-x Client",
   source: "Source Code",
   github: "GitHub",
   gitee: "Gitee",

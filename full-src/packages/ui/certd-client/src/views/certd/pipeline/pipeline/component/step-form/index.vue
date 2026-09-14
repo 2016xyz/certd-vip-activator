@@ -141,9 +141,9 @@ function useStepForm() {
       return;
     }
     if (item.needPlus && !settingStore.isPlus) {
-      notification.warning({ message: "此插件需要开通Certd专业版才能使用" });
+      notification.warning({ message: "此插件需要开通certd-x 专业版才能使用" });
       mitter.emit("openVipModal");
-      throw new Error("此插件需要开通Certd专业版才能使用");
+      throw new Error("此插件需要开通certd-x 专业版才能使用");
     }
     currentStep.type = item.name;
     currentStep.title = item.title;

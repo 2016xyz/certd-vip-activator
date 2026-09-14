@@ -55,7 +55,7 @@ export class DeployToCertdPlugin extends AbstractTaskPlugin {
     await certReader.readCertFile({ logger: this.logger, handle });
     this.logger.info(`证书已部署到 ${crtPath} 和 ${keyPath}`);
 
-    this.logger.info("Certd https server 将在 30 秒后重启");
+    this.logger.info("certd-x https server 将在 30 秒后重启");
     await this.ctx.utils.sleep(30000);
     await httpsServer.restart();
   }

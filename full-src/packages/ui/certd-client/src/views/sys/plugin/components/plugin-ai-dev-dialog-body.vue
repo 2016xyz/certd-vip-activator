@@ -32,8 +32,8 @@
         <div class="plugin-ai-dev__prompt-head"><span>AI启动提示词</span></div>
         <a-textarea class="plugin-ai-dev__prompt" :value="prompt" readonly :rows="10" placeholder="点击上方按钮生成提示词" />
         <a-button class="plugin-ai-dev__copy" type="primary" :disabled="!prompt" @click="copyPrompt">复制提示词</a-button>
-        <div class="plugin-ai-dev__warning">将提示词复制到 Codex / Trae / WorkBuddy 等AI开发工具中，即可开始开发插件，开发完成后会自动推送到Certd平台，然后就可以配置到流水线中进行测试。</div>
-        <div class="plugin-ai-dev__warning">注意：要建一个空项目来做工作目录，开发过程中会拉取Certd源码</div>
+        <div class="plugin-ai-dev__warning">将提示词复制到 Codex / Trae / WorkBuddy 等AI开发工具中，即可开始开发插件，开发完成后会自动推送到certd-x 平台，然后就可以配置到流水线中进行测试。</div>
+        <div class="plugin-ai-dev__warning">注意：要建一个空项目来做工作目录，开发过程中会拉取 certd-x 源码</div>
       </template>
       <template v-else
         ><a-alert message="等待 Codex / Trae 完成开发并提交插件版本后，再选择流水线测试。" type="warning" show-icon />
@@ -172,7 +172,7 @@ const selectedPluginReference = computed(() => recentPlugins.value[0]?.fullName 
 const aiTestPrompt = computed(() => {
   if (!pipelineId.value || !accessToken.value) return "";
   const plugin = selectedPluginReference.value;
-  return `请使用 Certd AI 测试接口验证插件。\n1. POST ${window.location.origin}/api/scoped/sys/ai/plugin/pipeline/trigger，JSON：{"pipelineId":${pipelineId.value},"taskId":"${pluginTaskId.value || ""}"}，Authorization: Bearer ${accessToken.value}。保存响应中的 historyId。\n2. 每 5-10 秒 POST ${window.location.origin}/api/scoped/sys/ai/plugin/pipeline/status，JSON：{"pipelineId":${pipelineId.value},"historyId":"上一步返回的historyId","plugin":"${plugin}"}。\n3. 根据返回的 pipelineStatus、currentTask、pluginTask 和 logs 判断流水线及当前开发插件是否成功；测试结束后给出结论和关键日志。`;
+  return `请使用 certd-x AI 测试接口验证插件。\n1. POST ${window.location.origin}/api/scoped/sys/ai/plugin/pipeline/trigger，JSON：{"pipelineId":${pipelineId.value},"taskId":"${pluginTaskId.value || ""}"}，Authorization: Bearer ${accessToken.value}。保存响应中的 historyId。\n2. 每 5-10 秒 POST ${window.location.origin}/api/scoped/sys/ai/plugin/pipeline/status，JSON：{"pipelineId":${pipelineId.value},"historyId":"上一步返回的historyId","plugin":"${plugin}"}。\n3. 根据返回的 pipelineStatus、currentTask、pluginTask 和 logs 判断流水线及当前开发插件是否成功；测试结束后给出结论和关键日志。`;
 });
 function nextStep() {
   if (canNext.value) step.value++;
@@ -183,7 +183,7 @@ async function createPrompt() {
   try {
     const token = await api.GetScopedAccessToken(["sys/ai"]);
     accessToken.value = token.token;
-    prompt.value = `你是 Certd 在线插件开发 Agent。\n\n开发模式：${mode.value === "new" ? "开发新插件" : "修改已有插件"}\n插件类型：${pluginType.value || "按已有插件类型"}\n插件 ID：${pluginPath.value.at(-1) || "无"}\n用户需求：\n${requirement.value.trim()}\n\n如果用户需求描述与他选择的插件类型有冲突，你需要跟用户确认是否选错插件类型。 \nCertd 地址：${window.location.origin}\n受限 AccessToken（6小时有效）：${token.token}\n\n请先读取 .trae/skills/certd-online-plugin-dev/SKILL.md，按插件类型开发并提交版本。仅调用 /scoped/sys/ai/plugin/ 前缀接口，完成后报告提交结果，不自动发布。\n如果当前工作目录不是 Certd 项目，或缺少 certd-online-plugin-dev Skill，先拉取 Certd 仓库代码并切换到仓库内工作(git clone https://atomgit.com/certd/certd --depth 1 )`;
+    prompt.value = `你是 certd-x 在线插件开发 Agent。\n\n开发模式：${mode.value === "new" ? "开发新插件" : "修改已有插件"}\n插件类型：${pluginType.value || "按已有插件类型"}\n插件 ID：${pluginPath.value.at(-1) || "无"}\n用户需求：\n${requirement.value.trim()}\n\n如果用户需求描述与他选择的插件类型有冲突，你需要跟用户确认是否选错插件类型。 \ncertd-x 地址：${window.location.origin}\n受限 AccessToken（6小时有效）：${token.token}\n\n请先读取 .trae/skills/certd-online-plugin-dev/SKILL.md，按插件类型开发并提交版本。仅调用 /scoped/sys/ai/plugin/ 前缀接口，完成后报告提交结果，不自动发布。\n如果当前工作目录不是 certd-x 项目，或缺少 certd-online-plugin-dev Skill，先拉取 certd-x 仓库代码并切换到仓库内工作(git clone https://atomgit.com/certd/certd --depth 1 )`;
     notification.success({ message: "启动提示词已生成" });
   } finally {
     creating.value = false;

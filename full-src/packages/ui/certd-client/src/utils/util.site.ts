@@ -5,7 +5,7 @@ export const site = {
    * @param titleText
    */
   title: function (titleText: string, baseTitle?: string) {
-    const processTitle = baseTitle || env.TITLE || "Certd";
+    const processTitle = baseTitle || env.TITLE || "certd-x";
     window.document.title = `${processTitle}${titleText ? ` | ${titleText}` : ""}`;
   },
 };

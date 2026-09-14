@@ -15,7 +15,7 @@
         type="text"
         icon="clarity:host-solid-badged"
         :text="null"
-        :tooltip="{ title: 'Certd无法访问主机？试试主动拉取证书的客户端CertdClient吧' }"
+        :tooltip="{ title: 'certd-x 无法访问主机？试试主动拉取证书的客户端 certd-x Client 吧' }"
         @click="goCertdClient"
       />
     </template>

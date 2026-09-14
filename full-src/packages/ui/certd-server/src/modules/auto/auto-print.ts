@@ -51,7 +51,7 @@ export class AutoPrint {
     if (isPlus()) {
       logger.info(`授权信息:${plusInfo.vipType},${plusInfo.expireTime === -1 ? "永久" : dayjs(plusInfo.expireTime).format("YYYY-MM-DD")}`);
     }
-    logger.info("Certd已启动");
+    logger.info("certd-x已启动");
     logger.info("=========================================");
     await this.resetPasswd();
   }

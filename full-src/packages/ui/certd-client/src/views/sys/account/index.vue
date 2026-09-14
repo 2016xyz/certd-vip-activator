@@ -83,7 +83,7 @@ onMounted(() => {
     await settingStore.doBindUrl();
     notification.success({
       message: "更新成功",
-      description: "Certd专业版/商业版已激活",
+      description: "certd-x 专业版/商业版已激活",
     });
   });
 });

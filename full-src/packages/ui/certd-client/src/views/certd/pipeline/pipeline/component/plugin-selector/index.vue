@@ -142,7 +142,7 @@ watch(
 
 function checkNeedPlus(item: any): boolean {
   if (item.needPlus && !settingStore.isPlus) {
-    notification.warning({ message: "此插件需要开通Certd专业版才能使用" });
+    notification.warning({ message: "此插件需要开通certd-x 专业版才能使用" });
     mitter.emit("openVipModal");
     return false;
   }

@@ -110,7 +110,7 @@ export class OneBotNotification extends BaseNotification {
         timeout: 5000,
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": "Certd-Notification/1.0",
+          "User-Agent": "certd-x-Notification/1.0",
         },
       });
 

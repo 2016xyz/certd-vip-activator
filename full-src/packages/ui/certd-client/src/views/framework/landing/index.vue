@@ -3,7 +3,7 @@
     <nav class="landing-nav">
       <div class="nav-container">
         <div class="nav-logo overflow-hidden text-ellipsis whitespace-nowrap">
-          <img :src="siteInfo.logo" alt="Certd Logo" class="logo-img" />
+          <img :src="siteInfo.logo" alt="certd-x logo" class="logo-img" />
           <span class="logo-text ellipsis">{{ siteInfo.title }}</span>
         </div>
         <div class="nav-links text-nowrap">
@@ -42,7 +42,7 @@
           </div>
         </div>
         <div class="hero-image-wrapper">
-          <img :src="isDark ? '/static/images/certd-intro-dark.png' : '/static/images/certd-intro.png'" alt="Certd Intro" class="hero-image" />
+          <img :src="isDark ? '/static/images/certd-intro-dark.png' : '/static/images/certd-intro.png'" alt="certd-x intro" class="hero-image" />
         </div>
       </div>
     </section>
@@ -69,8 +69,8 @@
         <!-- <div class="footer-content">
           <div class="footer-left">
             <div class="footer-logo">
-              <img src="/static/images/logo/logo.svg" alt="Certd Logo" class="footer-logo-img" />
-              <span class="footer-logo-text">Certd</span>
+              <img src="/static/images/logo/logo.svg" alt="certd-x logo" class="footer-logo-img" />
+              <span class="footer-logo-text">certd-x</span>
             </div>
             <p class="footer-desc">全自动证书管理系统</p>
           </div>

@@ -79,7 +79,7 @@ export class NotificationService extends BaseService<NotificationEntity> {
     const define = this.getDefineByType(type);
     //@ts-ignore
     if (define.needPlus && !isPlus()) {
-      throw new NeedVIPException("此通知类型为Certd专业版功能，请升级到专业版或以上级别");
+      throw new NeedVIPException("此通知类型为certd-x 专业版功能，请升级到专业版或以上级别");
     }
   }
 
@@ -188,7 +188,7 @@ export class NotificationService extends BaseService<NotificationEntity> {
 
       if (notifyConfig.type != "email") {
         //非邮件通知，需要加上站点名称
-        let siteTitle = "Certd";
+        let siteTitle = "certd-x";
         if (isComm()) {
           const siteInfo = await this.sysSettingsService.getSetting<SysSiteInfo>(SysSiteInfo);
           siteTitle = siteInfo?.title || siteTitle;

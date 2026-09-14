@@ -4,7 +4,7 @@ import { useSettingStore } from "/@/store/settings";
 export const certdResources = [
   {
     title: "certd.title",
-    name: "CertdRoot",
+    name: "CertdxRoot",
     path: "/cert",
     redirect: "/cert/pipeline",
     meta: {
