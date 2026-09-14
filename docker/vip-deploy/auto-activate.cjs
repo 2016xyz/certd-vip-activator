@@ -29,16 +29,20 @@ async function main() {
       db.prepare("UPDATE sys_settings SET setting=? WHERE key='sys.license'").run(JSON.stringify({ license: j.data.license }));
       console.log(`[auto-activate] ✓ license 已按 siteId=${siteId} 写库. 触发 certd 进程重启使其立即生效...`);
       await wait(3000);
+      // 如果身为 PID1 (entrypoint exec 场景) — 直接退出, docker restart: unless-stopped 会拉起, 拉起后 license 即生效
+      if (process.pid === 1) {
+        console.log('[auto-activate] PID1 退出使容器重启 (restart:unless-stopped 拉起后即生效)');
+        process.exit(0);
+      }
+      // 否则尝试 kill certd 子进程
       try {
-        // 扫 /proc/*/cmdline 找 certd node 进程并 kill (PID1 entrypoint 的子进程)
-        const fs = require('fs');
         const { execSync } = require('child_process');
         const out = execSync(
           "for d in /proc/[0-9]*/; do c=$(tr '\\0' ' ' < $d/cmdline 2>/dev/null); case \"$c\" in *bootstrap.js*) echo ${d//[^0-9]/};; esac; done | head -1",
           { shell: '/bin/sh', encoding: 'utf8' }).trim();
-        if (out) { execSync('kill ' + out); console.log('[auto-activate] 已 kill certd pid=' + out + ' (restart策略自动接管)'); }
+        if (out) { execSync('kill ' + out); console.log('[auto-activate] 已 kill certd pid=' + out); }
       } catch (e) { console.log('[auto-activate] kill err:', e.message); }
-      console.log('[auto-activate] 完成 (等 certd 被 restart 策略拉起后即生效)');
+      console.log('[auto-activate] 完成');
       process.exit(0);
     } catch (e) { console.log('[auto-activate] fetch err:', e.message); }
   }
