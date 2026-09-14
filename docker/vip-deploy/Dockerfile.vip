@@ -104,8 +104,9 @@ COPY --from=builder /workspace/certd-server/ /app/
 RUN pnpm install --production
 COPY ./patch/ssh2/*.js /app/node_modules/.pnpm/node_modules/ssh2/lib/protocol/
 
-# ★★★ VIP 关键: 确保镜像里 plus-core 仍是 patched 版
-# (builder 里 patch 完会随 certd-server copy 进来, 这里校验)
+# ★★★ VIP 关键: pnpm install --production 会重铺 node_modules, 重新覆盖 plus-core 为 patched 版
+COPY ./patched-plus-core.js /app/patched-plus-core.js
+RUN cp /app/patched-plus-core.js /app/node_modules/@certd/plus-core/dist/index.js
 RUN grep -c 'license ok' /app/node_modules/@certd/plus-core/dist/index.js
 
 # ★★★ VIP 关键: 内置 fake-plus-server 依赖, 并把激活脚本内置在镜像里
