@@ -9,7 +9,8 @@
             <defs>
               <linearGradient id="cx" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#4cc9b0"/><stop offset="100%" stop-color="#3b82f6"/>
-              </defs>
+              </linearGradient>
+            </defs>
             <circle cx="32" cy="32" r="30" fill="url(#cx)"/>
             <path d="M22 24 L44 40 M44 24 L22 40" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
             <circle cx="32" cy="32" r="11" fill="none" stroke="#fff" stroke-width="3"/>
