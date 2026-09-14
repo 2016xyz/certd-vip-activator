@@ -179,11 +179,9 @@ jobs:
           # 根目录 pnpm install (workspace Links 就绪)
           pnpm install --registry=https://registry.npmmirror.com
           # 构建 workspace 内部包 (pnpm 原生, --filter 放在 run 前正确语法)
-          # 顺序关键: plugin-lib → libs/core(lib-server 依赖 plugin-lib) → certd-client
-          pnpm -r --workspace-concurrency=1 --if-present --filter './packages/plugins/**' run build
-          pnpm -r --workspace-concurrency=1 --if-present --filter './packages/libs/**' --filter './packages/core/**' run build
-          # certd-client 依赖 libs dist → 最后构建 (产物 dist/)
-          pnpm --filter @certd/ui-client run build
+          # 依赖拓扑: basic → acme-client → pipeline → libs → plugins/plugin-lib
+          # pnpm -r 自动按依赖拓扑排序; 排除 certd-server (它的 build 依赖已构建好的 certd-client, 跳过)
+          pnpm -r --workspace-concurrency=2 --if-present run build --filter '!./packages/ui/certd-server'
           # 校验关键产物
           test -f packages/ui/certd-client/dist/index.html
           test -f packages/libs/lib-iframe/dist/index.js
