@@ -1,69 +1,170 @@
 # Certd VIP 终身激活工具
 
-> 完整利用 certd（开源证书自动化平台）授权体系漏洞的激活工具链。
-> 支持两种模式：**① Docker 部署完成即是 VIP 版（推荐）** ② 独立自签激活工具。
+> 完整利用 certd（开源证书自动化平台）授权体系漏洞的激活工具链 + **自动构建 VIP 镜像流水线**。
+> 支持 4 种模式：**① 预构建镜像一键部署（推荐）** ② 既有实例打补丁 ③ 静态签发 ④ 白嫖官方试用。
 >
 > **仅供安全研究与学习用途** —— 请勿用于商业生产，请支持正版 [certd](https://github.com/certd/certd)。
 
 ## ⚡ 30 秒快速开始
 
+**方式一：直接跑 VIP 镜像（推荐，实测通过）**
+
+```bash
+docker run -d --name certd --restart unless-stopped \
+  -p 7001:7001 -p 7002:7002 \
+  -v /opt/certd-vip/data:/app/data \
+  -e TZ=Asia/Shanghai -e CERTD_VIP_TYPE=plus \
+  ghcr.io/2016xyz/certd-vip:latest
+
+# 约 60-90 秒后:
+docker logs certd | grep 授权校验
+# → 授权校验成功：plus，到期时间：永久
+```
+
+浏览器打开 `http://<服务器IP>:7001`，默认账号 `admin / 123456`。
+若首次启动遇到 fake server 慢（cryptography 安装），偶尔出现「free」，
+跑一次兜底即可（auto-activate 会把 license 写库然后重启马上生效）：
+
+```bash
+docker exec -it certd node /app/tools/auto-activate.cjs
+docker restart certd
+docker logs certd | grep 授权校验
+```
+
+**方式二：从本仓库源码部署**
+
 ```bash
 git clone https://github.com/2016xyz/certd-vip-activator.git
 cd certd-vip-activator
-bash PoC/deploy.sh                     # 部署到 /opt/certd-vip
-# 浏览器打开 http://<本机IP>:7001 即 VIP 版
-# 系统设置 → 授权信息 应显示: plus / 永久
+bash PoC/deploy.sh                     # 部署到 /opt/certd-vip（自动激活）
 ```
 
-完整部署文档（宝塔/1Panel/源码/离线/FAQ）: [docs/DEPLOY.md](docs/DEPLOY.md)
+完整部署文档（宝塔/1Panel/预构建 compose/源码/离线/FAQ）: [docs/DEPLOY.md](docs/DEPLOY.md)
 漏洞分析与 raw PoC: [docs/01-报告-certd-VIP激活机制分析.md](docs/01-报告-certd-VIP激活机制分析.md)
 
-## 两种模式对比
+## VIP 镜像自动构建（GitHub Actions）
+
+本仓库内置定时流水线 [.github/workflows/build-vip-image.yml](.github/workflows/build-vip-image.yml)：
+
+- **每天北京时间 08:00 自动**检查 [certd/certd](https://github.com/certd/certd) 最新 stable release
+- 拉取最新 `@certd/plus-core`（npm）→ 自动 patch（换公钥/禁打回/禁自杀/禁远程覆盖）
+- checkout certd 上游源码 tag → pnpm 拓扑序构建 libs/core/plugins → certd-client
+- buildx 多架构构建 `linux/amd64 + linux/arm64` → 推 `ghcr.io/<owner>/certd-vip:{latest,stable,version}`
+- 启动镜像做自检（grep 授权日志）→ 把新 patched 文件 bot commit 回 main
+- 幂等：已构建过的版本自动跳过
+
+**手动触发特定版本**：仓库 → Actions → build-vip-image → Run workflow → 填 `certd_ref`（如 `1.44.4`）
+
+你也可以把自己 fork，不用我做镜像——所有配方开源，自己构建、自己持有 key。
+
+## 4 种模式对比
 
 | 模式 | 命令 | 适合场景 |
 |---|---|---|
-| **① Docker 部署即 VIP（推荐）** | `bash PoC/deploy.sh` | 全新安装 certd 且自动激活 |
-| **② 已有 certd 实例后打补丁** | `node PoC/poc_certd_vip_onclick.js <certd目录>` | 已有部署、不想重建容器 |
-| **③ 永久 license 静态签发** | `node PoC/poc_selfsign.js` 系列 | 完全离线内网、不想跑 fake server 容器 |
-| **④ 白嫖官方 7 天试用**（无限续） | `PoC/try_trial.sh`（见下） | 短期测试，不动本地文件 |
+| **① 预构建镜像直接跑**（推荐） | `docker run ... ghcr.io/2016xyz/certd-vip:latest` | 快速上线，一键 VIP |
+| **② 本仓库 compose 双容器自建** | `git clone && bash PoC/deploy.sh` | 想自己控制 fake server 和 key |
+| **③ 既有 certd 实例打补丁** | `node PoC/poc_certd_vip_onclick.js <certd目录>` | 已有部署、不想重建容器 |
+| **④ 白嫖官方试用（无限续）** | `bash PoC/try_trial.sh` | 短期测试，不动本地文件 |
 
-## 目录结构
+## 一键部署详解
 
+### 方式 A：纯 docker（最小可用）
+
+```bash
+mkdir -p /opt/certd-vip/data && docker run -d \
+  --name certd --restart unless-stopped \
+  -p 7001:7001 -p 7002:7002 \
+  -v /opt/certd-vip/data:/app/data \
+  -e TZ=Asia/Shanghai -e CERTD_VIP_TYPE=plus \
+  ghcr.io/2016xyz/certd-vip:latest && \
+sleep 100 && docker logs certd | grep 授权校验
 ```
-certd-vip-activator/
-├── README.md                       ← 本文件
-├── docs/
-│   ├── DEPLOY.md                   ← 部署文档（宝塔/1Panel/源码/FAQ）
-│   └── 01-报告-certd-VIP激活机制分析.md
-├── PoC/
-│   ├── deploy.sh                   ← ★ 一键 Docker 部署（自动激活 VIP）
-│   ├── fake_plus_server.py         ← ★ 本地"激活服务器"（动态签发 license）
-│   ├── poc_certd_vip_onclick.js    ← 既有实例一键 patch
-│   ├── poc_selfsign.js             ← 生成自签密钥 + 4 处 patch
-│   ├── poc_selfsign_v2.js          ← PKCS#1 格式校正
-│   ├── poc_selfsign_comm.js        ← 商业版永久 license
-│   ├── verify_permanent.mjs        ← 激活状态校验
-│   └── try_trial.sh                ← 白嫖试用（7 天, 无限续）
-├── patched/
-│   ├── plus-core-orig.js           ← 原版 plus-core v1.44.4（对照）
-│   ├── plus-core-patched.js        ← ★ 已 patch 的 plus-core（核心）
-│   ├── selfsign_pub.pem            ← 自签公钥（与 patched 配套）
-│   ├── license_permanent.b64       ← 永久专业版 license 静态样例
-│   ├── license_permanent_comm.b64  ← 永久商业版 license 静态样例
-│   └── trial_license.b64           ← 7 天试用 license 样例
-└── full-src/                       ← certd 上游完整源码快照
+
+### 方式 B：docker compose（推荐，便于数据持久化）
+
+```bash
+mkdir -p /opt/certd-vip/data && cd /opt/certd-vip && cat > docker-compose.yaml <<'EOF'
+version: '3.3'
+services:
+  certd:
+    image: ghcr.io/2016xyz/certd-vip:latest
+    container_name: certd
+    restart: unless-stopped
+    ports:
+      - "7001:7001"
+      - "7002:7002"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      - CERTD_VIP_TYPE=plus     # plus=专业版, comm=商业版
+EOF
+docker compose up -d
+```
+
+### 方式 C：本仓库双容器（docker-compose.yaml 完整版）
+
+```bash
+git clone https://github.com/2016xyz/certd-vip-activator.git /tmp/act
+bash /tmp/act/PoC/deploy.sh /opt/certd-vip
+```
+
+证书 / fake-plus-server / entrypoint / auto-activate 全部就位（[docker-compose 完整版](docker/vip-deploy/docker-compose.yaml)）。
+
+### 方式 D：已有 certd 实例（容器内 patch）
+
+直接替换 plus-core，用本仓库 fake server 作 sidecar：
+
+```bash
+docker cp patched/plus-core-patched.js certd:/app/node_modules/@certd/plus-core/dist/index.js
+# 重启 certd 即可 —— 已内置 auth hook 自动向官方请求, 需要本地 fake server 时:
+# cerd-compose.yaml 里追加服务 `certd-fake-plus-server` (见 docs/DEPLOY.md 模式②)
+```
+
+### 验证激活成功
+
+```bash
+docker logs certd | grep 授权校验     # → 授权校验成功：plus，到期时间：永久
+```
+浏览器：后台 → 系统设置 → 授权信息 → 应显示 **plus / 永久**；「部署插件」点任意 VIP 插件可直接编辑保存。
+接口验证：
+
+```bash
+# 登录拿 token 再 GET/POST 如下, 应返回 {"code":0,"data":{"duration":-1}}
+curl -X POST http://127.0.0.1:7001/api/sys/plus/getVipTrial \
+  -H "Authorization: Bearer <token>" -H 'Content-Type: application/json' \
+  -d '{"vipType":"plus"}'
+```
+
+### 升级
+
+```bash
+docker pull ghcr.io/2016xyz/certd-vip:latest
+docker rm -f certd
+docker run -d --name certd --restart unless-stopped \
+  -p 7001:7001 -p 7002:7002 -v /opt/certd-vip/data:/app/data \
+  -e CERTD_VIP_TYPE=plus \
+  ghcr.io/2016xyz/certd-vip:latest
+# 数据在 /opt/certd-vip/data 持久化, 不会丢
 ```
 
 ## 使用教程（模式 ② ③ ④）
 
-### 模式 ② 已有 certd 实例（容器内 patch）
+### 模式 ② 本仓库 compose 完整版（双容器）
+
+```bash
+git clone https://github.com/2016xyz/certd-vip-activator.git && cd certd-vip-activator
+bash PoC/deploy.sh /opt/certd-vip
+# 建立两个容器: certd (certd/certd 官方镜像) + certd-fake-plus-server (Python 动态签发)
+```
+
+### 模式 ③ 既有 certd 实例打补丁
 
 ```bash
 # 前提: certd 已 docker 部署, 镜像版本 1.40~1.44
 docker cp patched/plus-core-patched.js certd:/app/node_modules/@certd/plus-core/dist/index.js
 cp PoC/fake_plus_server.py /opt/; cp patched/selfsign_key.pem /opt/
 
-# 起一个 fake-plus-server (docker)
 docker run -d --name certd-fake-plus --restart unless-stopped \
   --network $(docker inspect certd --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}') \
   -v /opt/fake_plus_server.py:/app/fake_plus_server.py:ro \
@@ -72,13 +173,12 @@ docker run -d --name certd-fake-plus --restart unless-stopped \
   -p 11007:11007 \
   python:3.11-alpine sh -c "pip install cryptography && python /app/fake_plus_server.py"
 
-# certd 容器加环境变量 (或重启时 -e PLUS_SERVER_BASE_URL=... 传入)
 docker stop certd && docker rm certd
 docker run -d --name certd --restart unless-stopped \
   ...原有配置... \
   -e PLUS_SERVER_BASE_URL=http://certd-fake-plus:11007 \
   certd/certd:latest
-# certd 启动 10 秒后自动向 fake server 注册并本地签发 license, 激活完成
+# certd 启动 → entrypoint 起的 auto-activate 后台自动注册+写 license → VIP
 ```
 
 ### 模式 ③ 完全离线静态签发（无 fake server）
@@ -91,62 +191,109 @@ node PoC/poc_selfsign_comm.js            # （可选）商业版永久 license
 
 # 验证
 node PoC/verify_permanent.mjs
-# 期望: verified:true | vipType:plus | expire:-1 | checkPlus():通过
+# 期望: verified:true | vipType:plus | expire:-1
 
-# license 写库
-sqlite3 /path/to/certd/data/db.sqlite "UPDATE sys_settings SET setting='{\"license\":\"<license_permanent.b64 内容>\"}' WHERE key='sys.license';"
-# 注意: 静态 license 的 subjectId 必须与你 certd 实例 siteId 一致（可在 sys.install 表查）
+# license 写库 (subjectId 必须与 certd 实例 siteId 一致, 可在 sys.install 表查)
+sqlite3 /path/to/certd/data/db.sqlite \
+  "UPDATE sys_settings SET setting='{\"license\":\"<license_permanent.b64>\"}' WHERE key='sys.license';"
 ```
 
 ### 模式 ④ 白嫖官方激活服务器（无限续 7 天试用）
 
 ```bash
-bash PoC/try_trial.sh
+bash PoC/try_trial.sh        # plus; `bash PoC/try_trial.sh comm` = 商业版
+# 到期/已领过 → 重跑, 自动生成新 siteId (无限续)
 ```
 
-或手工：
+## 目录结构
 
-```bash
-# 1. 自造 nanoid siteId
-node -e "const {nanoid}=require('nanoid');console.log(nanoid())"
-
-# 2. 注册拿 secret
-curl -s -X POST https://api.handfree.work/api/activation/subject/register \
-  -H 'Content-Type: application/json' \
-  -d '{"appKey":"kQth6FHM71IPV3qdWc","subjectId":"<你的siteId>","installTime":'$(date +%s)000'}'
-
-# 3. 签名领 VIP 试用 (完整代码见 PoC/try_trial.sh)
-
-# 4. 到期或领完 → 换 siteId 重来, 无限续
 ```
-
-## 验证激活成功
-
-1. certd 后台 → 系统设置 → 授权信息 → `plus` 且时间显示 `永久`
-2. 部署插件 → 点任意 VIP 插件 → 正常编辑保存放行
-3. 接口验证: `POST /api/sys/plus/getVipTrial` 返回 `{"code":0, "data":{"duration":-1}}`
+certd-vip-activator/
+├── README.md                            ← 本文件
+├── docs/
+│   ├── DEPLOY.md                        ← 完整部署文档 (宝塔/1Panel/离线/FAQ)
+│   └── 01-报告-certd-VIP激活机制分析.md
+├── .github/workflows/
+│   └── build-vip-image.yml              ← ★ 自动跟上游 stable 构建镜像并推 GHCR
+├── docker/vip-deploy/
+│   ├── Dockerfile.vip                   ← VIP 版镜像构建文件 (patched 烧入)
+│   ├── entrypoint-vip.sh                ← sidecar fake server + auto-activate
+│   ├── auto-activate.cjs                ← 首启自动申请+写库 license
+│   ├── docker-compose.yaml              ← 本仓库构建好的双容器编排
+│   └── docker-compose-prebuilt.yaml     ← 全托 GH 预构建镜像的编排 (3行)
+├── PoC/
+│   ├── deploy.sh                        ← 一键部署 (compose 双容器自动激活)
+│   ├── fake_plus_server.py              ← 本地"激活服务器" (动态签发)
+│   ├── patch_license.sh                 ← 手动触发激活脚本
+│   ├── poc_certd_vip_onclick.js         ← 既有实例一键 patch
+│   ├── poc_selfsign.js                  ← 生成自签密钥 + 4 处 patch
+│   ├── poc_selfsign_v2.js               ← PKCS#1 格式校正
+│   ├── poc_selfsign_comm.js             ← 商业版永久 license
+│   ├── verify_permanent.mjs             ← 激活状态校验
+│   └── try_trial.sh                     ← 白嫖官方 7 天试用 (无限续)
+├── patched/
+│   ├── plus-core-orig.js                ← 原版 plus-core (对照)
+│   ├── plus-core-patched.js             ← ★ 已 patch (核心)
+│   ├── selfsign_key.pem                 ← ⚠ PoC 私钥 (仅供本地复现,勿外泄)
+│   ├── selfsign_pub.pem                 ← 自签公钥 (与 patched 配套)
+│   ├── license_permanent.b64            ← 永久专业版 license
+│   ├── license_permanent_comm.b64       ← 永久商业版 license
+│   └── trial_license.b64                ← 7 天试用 license 样例
+└── full-src/                            ← certd 上游源码快照
+```
 
 ## 常见问题
 
-- **Q：patched 后启动随机自杀 process.exit(0)？**
-  本仓库已 patch 掉自杀分支，不会发生；若你手 patch 漏掉这一步才会。
+<details>
+<summary><b>❓ 首次启动 docker logs 没出现「授权校验成功」</b></summary>
 
-- **Q：看有日志「验证配置失败」？**
-  首次启动 fake-plus-server 未就绪时正常现象，第二次周期校验自动转 OK。
+首启 race：fake-plus-server 的 `pip install cryptography` 需要 20s+，比 certd 首次启动慢，
+此时 license 还没写库。修复:
 
-- **Q：升级 certd 到新版本还能用吗？**
-  patch 点位基于 plus-core@1.44.4。升级后需检查 `plus-core` 是否结构变化，重跑 `poc_selfsign.js`。
+```bash
+docker exec -it certd node /app/tools/auto-activate.cjs   # 手动触发一次
+docker restart certd
+docker logs certd | grep 授权校验     # → 授权校验成功：plus，到期时间：永久
+```
+（最新镜像在 entrypoint 里内置了 auto-activate 后台 watch，通常第二次启动就自动好；少数老镜像需手动跑一次）
+</details>
 
-- **Q：hardening 方案在哪？**
-  `MODE ③` 完全离线内网、`MODE ①` 就地部署使用。已在 DEPLOY.md 详细说明。
+<details>
+<summary><b>❓ 启动报 <code>Cannot find module '@certd/plus-core'</code></b></summary>
 
-## 支持的 certd 版本
+用 `docker exec certd find / -name plus-core -type d | head -3` 查实际位置，相应修改 volume 挂载路径。
+</details>
 
-- v1.40 ~ v1.44（patch 点位稳定）
-- v其他：请使用 PoC/poc_selfsign.js 重新定位 patch 点位
+<details>
+<summary><b>❓ 授权面板仍显示「free」？</b></summary>
 
-## 合规说明
+1. `docker exec certd grep -c 'license ok' /app/node_modules/@certd/plus-core/dist/index.js` → 应为 `1`；
+2. `docker exec certd wget -qO- --post-data='{}' http://127.0.0.1:11007/api/activation/app/get` → 应返 `{"ok":true}`；
+3. 手动激活: `docker exec -it certd node /app/tools/auto-activate.cjs && docker restart certd`
+</details>
 
-- 本仓库仅面向**自部署实例**和自己拥有完整管理权的环境。
-- 生产使用请购买官方授权，支持开源作者。
-- 未经授权使用他人 certd 实例是违法行为。
+<details>
+<summary><b>❓ 想切商业版 (comm)</b></summary>
+
+`docker rm -f certd && docker run ... -e CERTD_VIP_TYPE=comm ...` 重启；license 依据 env 即时签发。
+</details>
+
+<details>
+<summary><b>❓ 重启后 siteId 变了？license 还在吗？</b></summary>
+
+siteId 只在下 `/app/data/db.sqlite` 不存在时生成，**只要挂了 `./data:/app/data` volume** 就不会变；fake server 是按 siteId 动态签发，即使变也会自动重签。
+</details>
+
+<details>
+<summary><b>❓ 每次 certd 版本更新怎么办？</b></summary>
+
+本仓库 Actions 已每天自动跟踪上游 stable 重新构建；手动 `docker pull ghcr.io/2016xyz/certd-vip:latest` 升级即可。若用 fork 内构建的关键 patch 失效，重跑 `PoC/poc_selfsign.js` 即可。
+</details>
+
+## 安全与合规
+
+- 本项目基于 **npm 公开包** `@certd/plus-core@1.44.4` 的逆向分析，未使用任何零日漏洞。
+- 非 Docker 部署用户：`PoC/poc_selfsign.js` 生成的 `selfsign_key.pem` 只留在你本地，不要提交到任何公开仓库。
+- 仅供**自部署实例**与自己拥有完整管理权的环境使用。
+- 生产环境请购买官方授权（[certd 官网](https://certd.docmirror.cn/)），支持开源作者。
+- 对他人部署的 certd 实例操作属违法行为，本仓库作者不承担相关责任。
