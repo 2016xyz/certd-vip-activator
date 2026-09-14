@@ -178,11 +178,8 @@ jobs:
           npm install -g pnpm@10.33.4
           # 根目录 pnpm install (workspace Links 就绪)
           pnpm install --registry=https://registry.npmmirror.com
-          # 构建 workspace 内部包 (pnpm 原生, 不用 lerna; workspace-concurrency 1 保证顺序)
-          # 排除 certd-server (它编译依赖 certd-client/dist, 单独最后构建) 
-          pnpm -r --workspace-concurrency=1 run --if-present build \
-            --filter './packages/libs/**' \
-            --filter './packages/core/**'
+          # 构建 workspace 内部包 (pnpm 原生, --filter 放在 run 前正确语法)
+          pnpm -r --workspace-concurrency=1 --if-present --filter './packages/libs/**' --filter './packages/core/**' run build
           # certd-client 依赖 libs dist → 最后构建 (产物 dist/)
           pnpm --filter @certd/ui-client run build
           # 校验关键产物
