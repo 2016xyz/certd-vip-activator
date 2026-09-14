@@ -1,0 +1,32 @@
+version: '3.3'
+
+# ★ 使用预构建 VIP 镜像部署（ghcr.io 自动构建）
+# 镜像已内置:
+#   - patched plus-core       (公钥已换)
+#   - fake-plus-server        (内置 sidecar, 监听 127.0.0.1:11007)
+#   - selfsign_key.pem        (与 patched 公钥配对的私钥)
+# 启动即 VIP, 无需任何额外 personal 配置
+
+services:
+  certd:
+    # 使用 VIP 镜像 (自动构建于 certd 最新版)
+    # 替换 <owner> 为你的 GitHub 用户名小写
+    image: ghcr.io/2016xyz/certd-vip:latest       # 或: ghcr.io/2016xyz/certd-vip:1.44.4-stable
+    # image: ghcr.io/2016xyz/certd-vip:1.44.4      # 锁定具体版本
+
+    container_name: certd
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "7001:7001"
+      - "7002:7002"
+    environment:
+      - TZ=Asia/Shanghai
+      - certd_system_resetAdminPasswd=false
+      - certd_koa_hostname=0.0.0.0
+      # ★ 镜像 entrypoint 已默认指向本容器内置 fake server (127.0.0.1:11007)
+      # 可覆盖 VIP 类型: plus | comm
+      - CERTD_VIP_TYPE=plus
+      # 如要给镜像内 fake server 指向外挂密钥, 用 -v 挂载后指定:
+      # - CERTD_SELF_KEY=/app/tools/selfsign_key.pem
