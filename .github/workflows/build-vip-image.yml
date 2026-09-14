@@ -248,6 +248,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/certd-vip:latest
             ghcr.io/${{ github.repository_owner }}/certd-vip:stable
+            ghcr.io/${{ github.repository_owner }}/certd-vip:v1.0.0-2026.9.14
             ghcr.io/${{ github.repository_owner }}/certd-vip:${{ steps.latest.outputs.version }}
 
       # ============================
