@@ -200,6 +200,7 @@ jobs:
           # ★★ VIP 关键: patched plus-core, fake server, key, entrypoint
           cp activator/patched/plus-core-patched.js  build-context/patched-plus-core.js
           cp activator/PoC/fake_plus_server.py       build-context/fake_plus_server.py
+          cp activator/docker/vip-deploy/auto-activate.cjs build-context/auto-activate.cjs
           cp activator/patched/selfsign_key.pem      build-context/selfsign_key.pem
           cp activator/docker/vip-deploy/entrypoint-vip.sh build-context/entrypoint-vip.sh
 

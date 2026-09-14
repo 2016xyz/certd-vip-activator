@@ -24,14 +24,17 @@ FAKE_PID=$!
 echo "[entrypoint-vip] fake-plus-server pid: ${FAKE_PID}"
 echo "[entrypoint-vip] PLUS_SERVER_BASE_URL=$PLUS_SERVER_BASE_URL"
 
-# 等 fake server 探活 (最多30s)
-for i in $(seq 1 15); do
+# 等 fake server 探活 (最多90s, pip install cryptography 首次需20s+)
+for i in $(seq 1 45); do
   if wget -q -O- --post-data='{}' "http://127.0.0.1:${CERTD_FAKE_SERVER_PORT}/api/activation/app/get" 2>/dev/null | grep -q '"ok":true' 2>/dev/null; then
     echo "[entrypoint-vip] fake-plus-server ready"
     break
   fi
   sleep 2
 done
+
+# ★ 首启自动激活: 后台 watch, 待 siteId 落库则 register→写 license (certd 下次周期校验即生效)
+( node /app/tools/auto-activate.cjs ) >/var/log/auto-activate.log 2>&1 &
 
 # 启动 certd (原 CMD)
 echo "[entrypoint-vip] starting certd ..."

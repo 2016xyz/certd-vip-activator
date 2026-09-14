@@ -112,7 +112,7 @@ RUN grep -c 'license ok' /app/node_modules/@certd/plus-core/dist/index.js
 # ★★★ VIP 关键: 内置 fake-plus-server 依赖, 并把激活脚本内置在镜像里
 COPY ./fake_plus_server.py /app/tools/fake_plus_server.py
 COPY ./selfsign_key.pem    /app/tools/selfsign_key.pem
-
+COPY ./auto-activate.cjs    /app/tools/auto-activate.cjs
 # 启动时启用内置激活逻辑: 直接 source 此启动脚本
 COPY ./entrypoint-vip.sh /app/tools/patch_license.sh
 RUN chmod +x /app/tools/patch_license.sh
