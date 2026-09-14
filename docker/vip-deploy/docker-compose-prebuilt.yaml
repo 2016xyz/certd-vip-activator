@@ -1,11 +1,16 @@
 version: '3.3'
 
-# ★ 使用预构建 VIP 镜像部署（ghcr.io 自动构建）
+# ★ 使用预构建 VIP 镜像部署（ghci Actions 自动构建, 每天跟踪上游 certd:stable）
 # 镜像已内置:
-#   - patched plus-core       (公钥已换)
-#   - fake-plus-server        (内置 sidecar, 监听 127.0.0.1:11007)
-#   - selfsign_key.pem        (与 patched 公钥配对的私钥)
-# 启动即 VIP, 无需任何额外 personal 配置
+#   - patched plus-core       (公钥已换, 构建时烧入)
+#   - fake-plus-server        (sidecar, 监听 127.0.0.1:11007)
+#   - selfsign_key.pem        (与 patched 公钥配对)
+#   - entrypoint-vip.sh       (自动起 fake server → 激活 → 启 certd)
+# 首次启动时 certd 自动向本地 fake server 注册并即时签发永久 license, 全程零配置
+#
+# 实测回显 (ghcr.io/2016xyz/certd-vip:latest, base certd/certd 1.44.4 stable):
+#   docker logs certd → [INFO] default - 授权校验成功：plus，到期时间：永久
+#   POST /api/sys/plus/getVipTrial → {"code":0,"data":{"duration":-1}}
 
 services:
   certd:
