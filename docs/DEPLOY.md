@@ -1,4 +1,4 @@
-# Certd VIP 版部署文档
+# certd-x (v1.0.0-2026.9.14) 部署文档
 
 > 完整复现 **Certd 专业版（VIP）** 部署流程，部署完成即是 VIP 版。
 > 结构与官方 certd 部署文档保持一致。
@@ -80,7 +80,9 @@ Certd 是开源证书自动化申请+部署平台。官方镜像 `certd/certd:<t
 
 ## 三、Docker 方式部署（推荐）
 
-### 方式 ⓪ 全自动一键安装（最推荐 · 全发行版）★NEW
+## 方式 ⓪ 全自动一键安装（最推荐 · 全发行版）
+
+> 可用 tag: `ghcr.io/2016xyz/certd-vip:{latest | stable | v1.0.0-2026.9.14 | <version>}`
 
 **在全新 Linux 机器上一行命令搞定【Docker 安装 + 镜像拉取 + 启动 + VIP 激活 + 终态验证】：**
 
@@ -163,7 +165,7 @@ mkdir -p /opt/certd-vip/data && cd /opt/certd-vip && cat > docker-compose.yaml <
 version: '3.3'
 services:
   certd:
-    image: ghcr.io/2016xyz/certd-vip:latest     # 或 :stable / :1.44.4
+    image: ghcr.io/2016xyz/certd-vip:v1.0.0-2026.9.14   # 或 :latest / :stable     # 或 :stable / :1.44.4
     container_name: certd
     restart: unless-stopped
     ports:
