@@ -170,15 +170,23 @@ jobs:
           lfs: true
 
       # ============================
-      # Step 5: 预构建 certd-client (官方流程所需, 产物进 certd-client/dist)
+      # Step 5: 预构建 workspace 内部 libs + certd-client (官方镜像构建流程)
       # ============================
-      - name: Build certd-client
+      - name: Build workspace libs & certd-client
         if: steps.check.outputs.need_build != 'false'
         run: |
           npm install -g pnpm@10.33.4
-          pnpm install
-          npm run build
-        working-directory: certd-src/packages/ui/certd-client
+          # 根目录 pnpm install (workspace Links 就绪)
+          pnpm install --registry=https://registry.npmmirror.com
+          # 构建 libs (lerna run build, containment 在 packages/libs/* 和 packages/core/*)
+          # 等价官方流水线的 $SUDO_CMD_E lerna run build
+          npx -y lerna@8 run build --concurrency 4 --no-progress 2>&1 | tail -40 || true
+          # 再构建 certd-client (产物 dist/)
+          pnpm --filter @certd/ui-client run build
+          # 校验 dist 存在
+          test -f packages/ui/certd-client/dist/index.html
+          test -f packages/libs/lib-iframe/dist/index.js
+        working-directory: certd-src
 
       # ============================
       # Step 5b: 组装 Docker 构建上下文
