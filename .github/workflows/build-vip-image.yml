@@ -176,6 +176,23 @@ jobs:
           lfs: true
 
       # ============================
+      # Step 4b: certd-x client 定制覆写 (login wow / redirect / locales / title / logo / version)
+      # ============================
+      - name: Apply certd-x client customization
+        if: steps.check.outputs.need_build != 'false'
+        run: |
+          set -e
+          SRC="activator/full-src/packages/ui/certd-client"
+          DST="certd-src/packages/ui/certd-client"
+          if command -v rsync > /dev/null 2>&1; then
+            rsync -a --exclude='node_modules' --exclude='dist' --exclude='.git' "$SRC/" "$DST/"
+          else
+            cp -a "$SRC"/. "$DST"/
+          fi
+          echo "[certd-x] client 定制覆盖完成"
+          grep -c "certd-x" "$DST/index.html" || true
+
+      # ============================
       # Step 5: 预构建 workspace 内部 libs + certd-client (官方镜像构建流程)
       # ============================
       - name: Build workspace libs & certd-client
@@ -192,6 +209,22 @@ jobs:
           test -f packages/ui/certd-client/dist/index.html
           test -f packages/libs/lib-iframe/dist/index.js
         working-directory: certd-src
+
+      # ============================
+      # Step 5a2: certd-x server 定制覆写 (auto-cron / passkey / email / app-controller / package.json)
+      # ============================
+      - name: Apply certd-x server customization
+        if: steps.check.outputs.need_build != 'false'
+        run: |
+          set -e
+          SRC="activator/full-src/packages/ui/certd-server"
+          DST="certd-src/packages/ui/certd-server"
+          for f in src/modules/auto/auto-cron.ts src/modules/login/service/passkey-service.ts \
+                   src/modules/basic/service/email-service.ts src/controller/basic/app-controller.ts \
+                   package.json; do
+            if [ -f "$SRC/$f" ]; then cp -f "$SRC/$f" "$DST/$f"; fi
+          done
+          echo "[certd-x] server 定制覆盖完成"
 
       # ============================
       # Step 5b: 组装 Docker 构建上下文
