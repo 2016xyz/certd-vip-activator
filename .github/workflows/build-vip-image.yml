@@ -236,7 +236,7 @@ jobs:
         if: steps.check.outputs.need_build != 'false'
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64   # arm64 需 qemu gyp native compile 会 SIGILL, 仅 amd64 提高稳定性; 后续如需 arm64 用 cross-compile Node.mjs
           push: true
           provenance: false
           sbom: false
