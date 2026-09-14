@@ -119,9 +119,9 @@ jobs:
             fs.writeFileSync(keyPath, privateKey);
             fs.writeFileSync('patched/selfsign_pub.pem', publicKey);
           }
-          // 用 pkcs8 key 导出 pkcs1 公钥 (与 plus-core 内置 key 格式对齐)
+          // 用 pkcs1 key 导出 pkcs1 公钥 (与 plus-core 内置 key 格式对齐)
           const privObj = crypto.createPrivateKey(privPem);
-          const pubPem = privObj.export({ type: 'pkcs1', format: 'pem' });
+          const pubPem = crypto.createPublicKey(privObj).export({ type: 'pkcs1', format: 'pem' });
           const pubB64 = Buffer.from(pubPem).toString('base64');
 
           // patch 1: 换公钥 (fit first constant)
@@ -144,7 +144,7 @@ jobs:
 
           // 自校验
           const m2 = src.match(/let l="([A-Za-z0-9+/=]+)"/);
-          if (Buffer.from(m2[1], 'base64').toString().slice(0, 40) !== '-----BEGIN RSA PUBLIC KEY') throw new Error('patch1 公钥替换失败');
+          if (Buffer.from(m2[1], 'base64').toString().slice(0, 25) !== '-----BEGIN RSA PUBLIC KEY') throw new Error('patch1 公钥替换失败');
           if (!src.includes('license ok')) throw new Error('patch3 自杀禁用失败');
           if (!src.includes('if(false){')) throw new Error('patch4 禁覆盖失败');
 
