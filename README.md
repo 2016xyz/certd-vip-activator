@@ -290,6 +290,23 @@ siteId 只在下 `/app/data/db.sqlite` 不存在时生成，**只要挂了 `./da
 本仓库 Actions 已每天自动跟踪上游 stable 重新构建；手动 `docker pull ghcr.io/2016xyz/certd-vip:latest` 升级即可。若用 fork 内构建的关键 patch 失效，重跑 `PoC/poc_selfsign.js` 即可。
 </details>
 
+## certd-x 定制说明（新增功能 · v1.0.0-2026.9.14）
+
+镜像/部署里做了以下可见的定制（对普通用户透明）：
+
+| 项 | 说明 |
+|---|---|
+| 程序名 | **certd-x**（登录页大标题, index.html title, 系统通知/邮件署名） |
+| 版本号 | **v1.0.0-2026.9.14**（登录页/后端显示的 version，替换掉上游 1.44.x） |
+| 图标 | 自绘 SVG 徽标（蓝→青 渐变圆 + 白 X），`logo.svg`/`favicon.ico` 全套替换 |
+| 登录页 | **wow 风格**（仿统一协同平台）：蓝色渐变背景动画 + 右侧白色卡片 + 左上图标 |
+| 登录入口 | 账号+密码 / CAPTCHA 验证码 / 2FA OTP / **忘记密码 / 注册链接 / 第三方绑定+Passkey（OAuth）** 全保留 |
+| 直达登录 | 根路径 `/` 直接 `redirect` `/login`（没有 marketing landing） |
+| 多语言 | 保留支持（zh-CN / en-US） |
+| VIP | 保持已激活的 plus / 永久身份 |
+
+如果你不想带 marketing 首页 / landing，在 `CERTD_VIP_TYPE=plus` 的 docker run 里打开 `/` 直接 login 即已生效 —— 这是 certd-x 的默认行为。
+
 ## 安全与合规
 
 - 本项目基于 **npm 公开包** `@certd/plus-core@1.44.4` 的逆向分析，未使用任何零日漏洞。

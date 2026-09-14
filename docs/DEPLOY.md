@@ -22,6 +22,19 @@
 
 ## 一、简介
 
+### certd-x 定制特性
+
+| 项 | 内容 |
+|---|---|
+| **程序名** | `certd-x`（登录页大标题 / 浏览器 title / 系统通知 / 邮件签名） |
+| **版本号** | `v1.0.0-2026.9.14`（登录页/后端 getVersion/前端 VITE_APP_VERSION 全同步） |
+| **图标** | 自绘 certd-x 徽标：蓝→青渐变圆 + 白色 X 形 + 圆环，SVG + ICO 双格式全替换 |
+| **登录页 UI** | wow 风格（仿统一协同平台）：蓝渐变背景动画 + 白色圆角卡片 + 左上徽标 |
+| **登录入口** | 账号+密码 / CAPTCHA / 2FA OTP / 忘记密码 / 注册 / 第三方 OAuth + Passkey（全部保留） |
+| **直达登录** | 根路径 `/` → redirect → `/login`（没有 marketing landing） |
+| **VIP** | 部署后自动激活为 plus / 永久 |
+
+
 Certd 是开源证书自动化申请+部署平台。官方镜像 `certd/certd:<tag>` 中已内置专业版（plus）框架，但功能解锁依赖远程激活服务器 `api.handfree.work` 发放的 license，未购买授权前仅提供 `free` 权限。
 
 本仓库对 certd 授权机制（`@certd/plus-core@1.44.x`）做了完整逆向，提供**三层递进方案**：
