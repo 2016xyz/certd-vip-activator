@@ -43,9 +43,29 @@
             <span class="btn-spinner" v-else><i class="fas fa-circle-notch fa-spin"></i> 登录中...</span>
           </button>
           <div class="wow-links">
-            <LanguageToggle class="text-blue-400"></LanguageToggle>
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                <LanguageToggle></LanguageToggle>
+                <router-link v-if="!!settingStore.sysPublic.selfServicePasswordRetrievalEnabled && !queryBindCode"
+                             :to="{ name: 'forgotPassword' }" class="wow-link">
+                  {{ t('authentication.forgotPassword') }}
+                </router-link>
+                <a v-else-if="!queryBindCode" href="https://certd.docmirror.cn/guide/use/forgotpasswd/" target="_blank" class="wow-link">
+                  {{ t('authentication.forgotPassword') }}
+                </a>
+              </div>
+              <router-link v-if="hasRegisterTypeEnabled() && !queryBindCode" class="wow-link wow-link-strong"
+                           :to="{ name: 'register' }">
+                {{ t('authentication.registerLink') }}
+              </router-link>
+            </div>
           </div>
         </form>
+        <!-- 第三方绑定 / Passkey / OAuth 登录入口 (恢复) -->
+        <div v-if="!queryBindCode && (settingStore.sysPublic.oauthEnabled || settingStore.sysPublic.passkeyEnabled) && settingStore.isPlus"
+             class="wow-oauth-footer">
+          <oauth-footer :oauth-only="isOauthOnly"></oauth-footer>
+        </div>
 
         <!-- 2FA -->
         <form class="wow-login-form" onsubmit="return false;" v-else>
@@ -65,17 +85,16 @@
   </main>
 </template>
 <script lang="ts" setup>
-import { nextTick, reactive, ref, toRaw } from "vue";
+import { computed, nextTick, reactive, ref, toRaw } from "vue";
 import { useUserStore } from "/src/store/user";
 import { useSettingStore } from "/@/store/settings";
 import { utils } from "@fast-crud/fast-crud";
-import SmsCode from "/@/views/framework/login/sms-code.vue";
 import CaptchaInput from "/@/components/captcha/captcha-input.vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "/@/locales";
 import OauthFooter from "/@/views/framework/oauth/oauth-footer.vue";
 import * as oauthApi from "../oauth/api";
 import { request } from "/src/api/service";
-import * as UserApi from "/src/store/user/api.user";
 import { inviteUtils } from "/@/utils/util.invite";
 import { LanguageToggle } from "/@/vben/layouts";
 import { notification } from "ant-design-vue";
@@ -91,6 +110,7 @@ const rememberMe = ref(false);
 
 const settingStore = useSettingStore();
 const formRef = ref();
+const { t } = useI18n();
 let defaultLoginType = settingStore.sysPublic.defaultLoginType || "password";
 if (defaultLoginType === "sms") {
   if (!settingStore.sysPublic.smsLoginEnabled || !settingStore.isComm) {
@@ -109,6 +129,7 @@ const formState = reactive({
   inviteCode: inviteUtils.get(),
 });
 
+const sysPublicSettings = settingStore.getSysPublic;
 const twoFactor = reactive({
   loginId: "",
   verifyCode: "",
@@ -144,6 +165,18 @@ const handleTwoFactorSubmit = async () => {
     notification.success({ message: "绑定第三方账号成功" });
   }
 };
+
+const hasRegisterTypeEnabled = () => {
+  const sys = settingStore.sysPublic;
+  return sys.registerEnabled && (sys.usernameRegisterEnabled || sys.emailRegisterEnabled || sys.mobileRegisterEnabled || sys.smsLoginEnabled);
+};
+
+const isOauthOnly = computed(() => {
+  if (queryOauthOnly === "false" || queryOauthOnly === "0") {
+    return false;
+  }
+  return sysPublicSettings.oauthOnly && settingStore.isPlus && sysPublicSettings.oauthEnabled;
+});
 </script>
 
 <style lang="less">
@@ -218,6 +251,16 @@ const handleTwoFactorSubmit = async () => {
     &:disabled { opacity: .7; }
   }
   .wow-link-back { display: block; text-align: center; margin-top: 14px; color: #4b5563; font-size: 13px; cursor: pointer; }
+  .wow-links { margin-top: 10px; font-size: 13px; }
+  .wow-link { color: #4b5563; text-decoration: none; &:hover { color: @wow-primary; } }
+  .wow-link-strong { color: #111; font-weight: 600; &:hover { color: @wow-primary; } }
+  .wow-oauth-footer { margin-top: 14px; border-top: 1px solid #eef1f4; padding-top: 12px;
+    :deep(.oauth-title-text) { font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 8px; }
+    :deep(.oauth-icon-button) { display: inline-flex; flex-direction: column; align-items: center;
+      min-width: 72px; padding: 6px; border-radius: 10px; background: #f8fafc;
+      .title { font-size: 11px; margin-top: 4px; color: #475569; max-width: 96px; }
+      &:hover { background: #eef6fb; } }
+  }
 }
 
 @keyframes cx-bg-shift {
