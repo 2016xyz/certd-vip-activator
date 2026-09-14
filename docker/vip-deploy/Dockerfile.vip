@@ -113,7 +113,7 @@ COPY ./fake_plus_server.py /app/tools/fake_plus_server.py
 COPY ./selfsign_key.pem    /app/tools/selfsign_key.pem
 
 # 启动时启用内置激活逻辑: 直接 source 此启动脚本
-COPY ./auto-activate-vip.sh    /app/tools/patch_license.sh
+COPY ./entrypoint-vip.sh /app/tools/patch_license.sh
 RUN chmod +x /app/tools/patch_license.sh
 RUN apk add --no-cache python3 py3-pip 2>/dev/null || true
 # 无法 pip install 到 host, 让 fake_plus_server 单独跑一个容器即可
