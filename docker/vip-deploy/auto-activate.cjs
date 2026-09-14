@@ -34,15 +34,9 @@ async function main() {
         console.log('[auto-activate] PID1 退出使容器重启 (restart:unless-stopped 拉起后即生效)');
         process.exit(0);
       }
-      // 否则尝试 kill certd 子进程
-      try {
-        const { execSync } = require('child_process');
-        const out = execSync(
-          "for d in /proc/[0-9]*/; do c=$(tr '\\0' ' ' < $d/cmdline 2>/dev/null); case \"$c\" in *bootstrap.js*) echo ${d//[^0-9]/};; esac; done | head -1",
-          { shell: '/bin/sh', encoding: 'utf8' }).trim();
-        if (out) { execSync('kill ' + out); console.log('[auto-activate] 已 kill certd pid=' + out); }
-      } catch (e) { console.log('[auto-activate] kill err:', e.message); }
-      console.log('[auto-activate] 完成');
+      // license 已写库. 不再主动 kill PID1 / certd — 容器下次重启或 certd 11h 周期校验即生效.
+      // 推荐手动: docker restart certd (立即生效)
+      console.log('[auto-activate] 完成。使立即生效: docker restart certd');
       process.exit(0);
     } catch (e) { console.log('[auto-activate] fetch err:', e.message); }
   }
