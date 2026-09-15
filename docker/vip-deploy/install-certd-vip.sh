@@ -39,8 +39,8 @@ fi
 $SUDO mkdir -p "$DATA_DIR"
 
 if $SUDO docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qE "^${CONTAINER}$"; then
-  log "清理旧容器 ${CONTAINER_NAME}"
-  $SUDO docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  log "清理旧容器 ${CONTAINER}"
+  $SUDO docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
 fi
 
 # ============================================================
@@ -122,7 +122,7 @@ $PULL_OK || { err "镜像拉取失败, 请检查网络"; exit 1; }
 # 4. 启动 + 自动激活
 # ============================================================
 log "启动 certd-x (VIP=$VIP_TYPE, http=$HTTP_PORT, https=$HTTPS_PORT)..."
-$SUDO docker run -d --name ${CONTAINER_NAME} --restart unless-stopped -p ${HTTP_PORT}:7001 -p ${HTTPS_PORT}:7002 -v "${DATA_DIR}:/app/data" -e TZ=Asia/Shanghai -e CERTD_VIP_TYPE=$VIP_TYPE $IMAGE >/dev/null
+$SUDO docker run -d --name ${CONTAINER} --restart unless-stopped -p ${HTTP_PORT}:7001 -p ${HTTPS_PORT}:7002 -v "${DATA_DIR}:/app/data" -e TZ=Asia/Shanghai -e CERTD_VIP_TYPE=$VIP_TYPE $IMAGE >/dev/null
 
 # ============================================================
 # 5. 等待就绪 + 自动激活 (升级版, 最多 180s)
@@ -131,7 +131,7 @@ log "等待 certd-x 启动 + 自动激活..."
 
 # 轮询等 license (cicd秘籍: 在 Certd 完全 ready后, install脚本写库一次即可)
 check_license() {
-  $SUDO docker exec ${CONTAINER_NAME} node -e "
+  $SUDO docker exec ${CONTAINER} node -e "
     function check(){
       try{
         const Database=require('/app/node_modules/better-sqlite3');
@@ -151,20 +151,20 @@ for i in $(seq 1 30); do       # 30 * 6s = 180s
   if [ "$LIC" = "1" ]; then LICENSE_OK=true; log "✓ license 自动写入成功"; break; fi
   if [ "$i" = "10" ]; then
     log "交叉验证: license 还没写入, 手动触发 auto-activate..."
-    $SUDO docker exec ${CONTAINER_NAME} node /app/tools/auto-activate.cjs 2>/dev/null | tail -1 || true
-    $SUDO docker restart ${CONTAINER_NAME} >/dev/null 2>&1 || true
+    $SUDO docker exec ${CONTAINER} node /app/tools/auto-activate.cjs 2>/dev/null | tail -1 || true
+    $SUDO docker restart ${CONTAINER} >/dev/null 2>&1 || true
   fi
 done
-$LIC_OK && echo "[certd-x] license OK" || log "license 等待超时, 手动重试: docker exec -it ${CONTAINER_NAME} node /app/tools/auto-activate.cjs && docker restart ${CONTAINER_NAME}"
+$LIC_OK && echo "[certd-x] license OK" || log "license 等待超时, 手动重试: docker exec -it ${CONTAINER} node /app/tools/auto-activate.cjs && docker restart ${CONTAINER}"
 
 # ============================================================
 # 6. 验证 + 输出
 # ============================================================
 sleep 45
-if $SUDO docker logs ${CONTAINER_NAME} 2>&1 | grep -q "授权校验成功"; then
-  log "✅ VIP 激活: $($SUDO docker logs ${CONTAINER_NAME} 2>&1 | grep '授权校验成功' | tail -1 | sed 's/.*INFO 1 \[midway:bootstrap\] current app started//')"
+if $SUDO docker logs ${CONTAINER} 2>&1 | grep -q "授权校验成功"; then
+  log "✅ VIP 激活: $($SUDO docker logs ${CONTAINER} 2>&1 | grep '授权校验成功' | tail -1 | sed 's/.*INFO 1 \[midway:bootstrap\] current app started//')"
 else
-  log "✅ VIP (基于授权信息): $($SUDO docker logs ${CONTAINER_NAME} 2>&1 | grep '授权信息' | tail -1 | sed 's/.*- //')"
+  log "✅ VIP (基于授权信息): $($SUDO docker logs ${CONTAINER} 2>&1 | grep '授权信息' | tail -1 | sed 's/.*- //')"
 fi
 
 LOCAL_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[^ ]+' | head -1) \
@@ -186,7 +186,7 @@ echo "授权状态:  后台 → 系统设置 → 授权信息 → $VIP_TYPE / �
 echo "数据目录:  $DATA_DIR"
 echo ""
 echo "常用命令:"
-echo "  docker logs ${CONTAINER_NAME} | grep 授权校验      # 验证 VIP"
-echo "  docker restart ${CONTAINER_NAME}                  # 重启"
-echo "  docker upgrade: docker pull $IMAGE && docker rm -f ${CONTAINER_NAME} && 重跑本脚本 (数据保留)"
+echo "  docker logs ${CONTAINER} | grep 授权校验      # 验证 VIP"
+echo "  docker restart ${CONTAINER}                  # 重启"
+echo "  docker upgrade: docker pull $IMAGE && docker rm -f ${CONTAINER} && 重跑本脚本 (数据保留)"
 echo ""
