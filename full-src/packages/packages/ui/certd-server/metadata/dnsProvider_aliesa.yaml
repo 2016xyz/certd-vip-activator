@@ -1,9 +1,0 @@
-name: aliesa
-title: 阿里ESA
-desc: 阿里ESA DNS解析
-accessType: aliesa
-icon: svg:icon-aliyun
-order: 0
-pluginType: dnsProvider
-type: builtIn
-scriptFilePath: /plugins/plugin-aliyun/dns-provider/aliesa-dns-provider.js

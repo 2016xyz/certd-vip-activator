@@ -1,9 +1,0 @@
-name: xinnetagent
-title: 新网(代理方式)
-desc: 新网域名解析(代理方式)
-icon: svg:icon-xinnet
-accessType: xinnetagent
-order: 7
-pluginType: dnsProvider
-type: builtIn
-scriptFilePath: /plugins/plugin-xinnet/dns-provider-agent.js

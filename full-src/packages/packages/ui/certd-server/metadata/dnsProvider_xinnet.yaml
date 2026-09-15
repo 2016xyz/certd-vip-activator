@@ -1,9 +1,0 @@
-name: xinnet
-title: 新网
-desc: 新网域名解析
-icon: svg:icon-xinnet
-accessType: xinnet
-order: 7
-pluginType: dnsProvider
-type: builtIn
-scriptFilePath: /plugins/plugin-xinnet/dns-provider.js
