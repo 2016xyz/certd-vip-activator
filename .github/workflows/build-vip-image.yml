@@ -38,16 +38,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -n "${{ github.event.inputs.certd_ref }}" ]; then
-            LATEST="${{ github.event.inputs.certd_ref }}"
-          else
-            # certd:stable 跟随 releases 的稳定版
-            LATEST=$(curl -sf https://api.github.com/repos/certd/certd/releases/latest | jq -r '.tag_name')
+          LATEST="${{ github.event.inputs.certd_ref }}"
+          if [ -z "$LATEST" ]; then
+            # 依次: GitHub releases/latest → tags → 固定默认 1.44.4
+            LATEST=$(curl -sf https://api.github.com/repos/certd/certd/releases/latest | jq -r '.tag_name // empty')
+            if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+              LATEST=$(curl -sf https://api.github.com/repos/certd/certd/tags | jq -r '.[0].name // empty' | head -1)
+            fi
+            if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+              LATEST="v1.44.4"
+            fi
           fi
           echo "tag=$LATEST" >> $GITHUB_OUTPUT
           VER="${LATEST#v}"
+          if [ -z "$VER" ]; then VER="1.44.4"; fi
           echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "certd 上游最新 stable: $LATEST"
+          echo "certd 上游最新 stable: $LATEST (VER=$VER)"
+
 
       - name: Check if already built
         id: check
