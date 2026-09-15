@@ -29,13 +29,6 @@
     <!-- 卡片 (居中) -->
     <section class="cx-login-card">
       <!-- 品牌 -->
-      <div class="cx-brand-row">
-        <img class="cx-brand-logo" :src="brandLogo" alt="certd-x logo" />
-        <span class="cx-brand-title">certd-x</span>
-      </div>
-      <p class="cx-hello">👋 欢迎回来，请登录您的凭证平台</p>
-      <p class="cx-sub">SSL 证书自动化 · 全自动部署更新</p>
-
       <a-form ref="formRefRef" layout="vertical" :model="formState" @finish="handleFinish" @finish-failed="handleFinishFailed">
 
         <!-- 账号 -->
@@ -122,7 +115,7 @@
     </section>
 
     <footer class="cx-login-footer">
-      <span>v1.0.0-2026.9.14 · powered by certd-x</span>
+      <span>证书自动化平台 v1.0.0</span>
     </footer>
   </div>
 </template>
@@ -302,17 +295,11 @@ onMounted(() => {
 
 @media (prefers-color-scheme: dark) {
   .cx-login-card { background: rgba(30,44,70,0.86); border-color: rgba(255,255,255,.08); color: #cbd5e1; }
-  .cx-brand-title, .cx-hello { color: #e2e8f0; }
-  .cx-hello { color: #22d3ee; }
-  .cx-sub { color: #94a3b8; }
   a.cx-link-primary { color: #38bdf8; }
   .cx-login-footer span { color: #52607a; }
 }
 
 // ······ brand
-.cx-brand-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
-.cx-brand-logo { height: 36px; width: 36px; border-radius: 10px; }
-.cx-brand-title { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: #1e2b45; }
 
 // ······ 表单
 .cx-login-page .ant-form-item { margin: 0 0 14px; }
@@ -367,8 +354,6 @@ a.cx-link-primary { color: #2563eb; } a.cx-link-primary:hover { color: #1d4ed8; 
 // ── 响应式
 @media (max-width: 640px) {
   .cx-login-card { padding: 30px 20px 22px; border-radius: 18px; }
-  .cx-brand-logo { height: 30px; width: 30px; }
-  .cx-brand-title { font-size: 20px; }
   .cx-btn-primary { height: 44px; font-size: 15px; }
   .cx-login-page { padding: 18px 14px; }
   .cx-row-mid { font-size: 12px; margin: -4px 0 14px; }
