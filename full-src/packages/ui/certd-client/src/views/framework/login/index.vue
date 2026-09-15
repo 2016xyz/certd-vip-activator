@@ -1,6 +1,5 @@
 <!-- certd-x 登录页 · 与统一协同平台(1000.2016xlx.cn:3011) 1:1 还原 -->
 <template>
-  <body-less class="login-page">
     <main class="wow-login-page">
       <div class="wow-login-background" aria-hidden="true"></div>
       <div class="wow-login-content">
@@ -38,12 +37,26 @@
               <span class="btn-label">登　录</span>
               <span class="btn-spinner" aria-hidden="true" v-if="loading"><i class="fas fa-circle-notch fa-spin"></i></span>
             </button>
-            <div class="login-alt" style="display:flex; justify-content: space-between; margin-top:14px;">
-              <!-- 保持功能一致性, 再按需保留 lang toggle -->
-              <span></span>
-              <span style="font-size:12px; opacity:.7; letter-spacing:1px;">certd-x</span>
+            <div class="login-alt wow-login-alt-links">
+              <router-link v-if="!!settingStore.sysPublic.selfServicePasswordRetrievalEnabled && !queryBindCode"
+                           :to="{ name: 'forgotPassword' }">
+                {{ t("authentication.forgotPassword") }}
+              </router-link>
+              <a v-else-if="!queryBindCode" href="https://certd.docmirror.cn/guide/use/forgotpasswd/" target="_blank">
+                {{ t("authentication.forgotPassword") }}
+              </a>
+              <router-link v-if="hasRegisterTypeEnabled() && !queryBindCode"
+                           :to="{ name: 'register' }" class="wow-link-strong">
+                {{ t("authentication.registerLink") }}
+              </router-link>
             </div>
           </form>
+
+          <!-- 第三方绑定 / Passkey / OAuth (恢复) -->
+          <div v-if="!queryBindCode && (settingStore.sysPublic.oauthEnabled || settingStore.sysPublic.passkeyEnabled) && settingStore.isPlus"
+               class="wow-oauth-footer">
+            <oauth-footer :oauth-only="isOauthOnly"></oauth-footer>
+          </div>
 
           <!-- 2FA -->
           <form class="wow-login-form" onsubmit="return false;" v-else>
@@ -62,7 +75,6 @@
         </section>
       </div>
     </main>
-  </body-less>
 </template>
 <script lang="ts" setup>
 import { computed, nextTick, reactive, ref, toRaw, onMounted } from "vue";
@@ -71,6 +83,8 @@ import { useSettingStore } from "/@/store/settings";
 import { utils } from "@fast-crud/fast-crud";
 import CaptchaInput from "/@/components/captcha/captcha-input.vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "/@/locales";
+import OauthFooter from "/@/views/framework/oauth/oauth-footer.vue";
 import * as oauthApi from "../oauth/api";
 import { request } from "/src/api/service";
 import { inviteUtils } from "/@/utils/util.invite";
@@ -98,6 +112,20 @@ const formState = reactive({
   captcha: null as any,
   smsCaptcha: null as any,
   inviteCode: inviteUtils.get(),
+});
+
+const sysPublicSettings = settingStore.getSysPublic;
+const { t } = useI18n();
+const queryOauthOnly = route.query.oauthOnly as string;
+
+const hasRegisterTypeEnabled = () => {
+  const sys = settingStore.sysPublic;
+  return sys.registerEnabled && (sys.usernameRegisterEnabled || sys.emailRegisterEnabled || sys.mobileRegisterEnabled || sys.smsLoginEnabled);
+};
+
+const isOauthOnly = computed(() => {
+  if (queryOauthOnly === "false" || queryOauthOnly === "0") return false;
+  return sysPublicSettings.oauthOnly && settingStore.isPlus && sysPublicSettings.oauthEnabled;
 });
 
 const twoFactor = reactive({
