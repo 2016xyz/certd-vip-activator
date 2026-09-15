@@ -137,7 +137,6 @@ import { useUserStore } from "/src/store/user";
 import { useSettingStore } from "/@/store/settings";
 import CaptchaInput from "/@/components/captcha/captcha-input.vue";
 import { useRoute } from "vue-router";
-import { useI18n } from "/@/locales";
 import OauthFooter from "/@/views/framework/oauth/oauth-footer.vue";
 import * as oauthApi from "../oauth/api";
 import { inviteUtils } from "/@/utils/util.invite";
