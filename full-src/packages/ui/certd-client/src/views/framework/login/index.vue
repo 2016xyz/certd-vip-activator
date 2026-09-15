@@ -172,6 +172,11 @@ const formState = reactive({
 
 const twoFactor = reactive({ loginId: "", verifyCode: "" });
 const sysPublicSettings = settingStore.getSysPublic;
+const rules = {
+  username: [{ required: true, message: '请输入账号' }],
+  password: [{ required: true, message: '请输入密码' }],
+  captcha: [{ required: true, message: '请进行验证码验证' }],
+};
 
 const hasRegisterTypeEnabled = () => {
   const sys = settingStore.sysPublic;
